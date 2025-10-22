@@ -1,0 +1,15 @@
+/* pages/CustomerFormPage/CustomerFormPage.css */
+.customer-form-page {
+  min-height: 100vh;
+  background-color: var(--mantine-color-gray-0);
+}
+
+/* components/FormContainer/FormContainer.css */
+.form-field-container {
+  min-height: 80px;
+}
+
+/* components/FormComponent/FormComponent.css */
+.form-component {
+  width: 100%;
+}
