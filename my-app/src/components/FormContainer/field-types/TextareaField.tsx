@@ -1,4 +1,3 @@
-// components/FormComponent/field-types/TextareaField.tsx
 import React from 'react';
 import { Textarea } from '@mantine/core';
 
@@ -15,7 +14,6 @@ interface TextareaFieldProps {
 }
 
 const TextareaField: React.FC<TextareaFieldProps> = ({
-  name,
   label,
   placeholder,
   maxLength,

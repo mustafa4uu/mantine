@@ -1,4 +1,5 @@
 // components/FormComponent/field-types/SelectField.tsx
+// (Updated to match Next.js logic for baseOptions)
 import React, { useMemo } from 'react';
 import { Select, Loader } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
@@ -16,7 +17,7 @@ interface SelectFieldProps {
   options?: { label: string; value: string; orderBy?: number; id?: number }[];
 }
 
-// Default address options
+// Default address options (from Next.js)
 const AddressOptions = [
   { label: "Permanent Address", value: "1", orderBy: 1 },
   { label: "Communication Address", value: "2", orderBy: 2 },
@@ -35,6 +36,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
   error,
   mode = "edit",
   options = [],
+  ...rest
 }) => {
   const disabled = mode === "view";
 
@@ -46,10 +48,10 @@ const SelectField: React.FC<SelectFieldProps> = ({
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch countries - FIXED ENDPOINT
+  // Fetch countries
   const { data: countryData = [], isLoading: loadingCountries } = useQuery({
     queryKey: ['countries'],
-    queryFn: () => fetchMasterData('/api/v1/masters/countries'), // Fixed endpoint
+    queryFn: () => fetchMasterData('/api/v1/masters/countries'),
     enabled: name === "country",
     staleTime: 5 * 60 * 1000,
   });
@@ -72,7 +74,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
     }));
   }, [countryData]);
 
-  // Prepare select data
+  // Prepare select data (matching Next.js logic)
   const selectData = useMemo(() => {
     let baseOptions: { label: string; value: string }[] = [];
     
@@ -84,18 +86,17 @@ const SelectField: React.FC<SelectFieldProps> = ({
       baseOptions = loadingCountries
         ? [{ label: "Loading countries...", value: "loading" }]
         : countryOptions;
-    } else if (name.includes("address")) {
-      baseOptions = AddressOptions;
     } else {
-      baseOptions = options;
+      // For other selects: AddressOptions + provided options (matching Next.js ternary)
+      baseOptions = [...AddressOptions, ...options];
     }
 
-    // Filter out any duplicate values and ensure no empty string duplicates
+    // Filter out duplicates
     const uniqueOptions = baseOptions.filter((option, index, self) => 
       index === self.findIndex((o) => o.value === option.value)
     );
 
-    // Only add placeholder if there are options
+    // Add placeholder option if applicable
     if (uniqueOptions.length > 0 && !uniqueOptions.some(opt => opt.value === "")) {
       return [
         { label: `Select ${label}`, value: "" },
@@ -120,6 +121,8 @@ const SelectField: React.FC<SelectFieldProps> = ({
       withAsterisk={required}
       rightSection={isLoading ? <Loader size="xs" /> : undefined}
       clearable={!required}
+      nothingFoundMessage={name === "locationCode" ? "No branches found" : name === "country" ? "No countries found" : "No options found"}
+      {...rest}
     />
   );
 };

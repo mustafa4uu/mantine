@@ -22,6 +22,7 @@ const RadioField: React.FC<RadioFieldProps> = ({
   error,
   mode = "edit",
   options = [],
+  ...rest
 }) => {
   const disabled = mode === "view";
 
@@ -40,6 +41,7 @@ const RadioField: React.FC<RadioFieldProps> = ({
             value={opt.value} 
             label={opt.label}
             disabled={disabled}
+            {...rest}
           />
         ))}
       </Group>

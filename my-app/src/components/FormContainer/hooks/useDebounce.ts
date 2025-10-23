@@ -1,10 +1,7 @@
-// hooks/useDebounce.ts
-import { useRef, useCallback, useEffect } from 'react';
+// components/FormComponent/hooks/useDebounce.tsx
+import { useCallback, useRef, useEffect } from 'react';
 
-export function useDebounce<T extends (...args: any[]) => void>(
-  callback: T,
-  delay: number
-): T {
+export const useDebounce = <T extends (...args: any[]) => void>(callback: T, delay: number) => {
   const callbackRef = useRef(callback);
   const timeoutRef = useRef<number | null>(null);
 
@@ -13,22 +10,17 @@ export function useDebounce<T extends (...args: any[]) => void>(
   }, [callback]);
 
   const debouncedCallback = useCallback((...args: Parameters<T>) => {
-    if (timeoutRef.current) {
-      window.clearTimeout(timeoutRef.current);
-    }
-    
-    timeoutRef.current = window.setTimeout(() => {
-      callbackRef.current(...args);
-    }, delay);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => callbackRef.current(...args), delay);
   }, [delay]);
 
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
-        window.clearTimeout(timeoutRef.current);
+        clearTimeout(timeoutRef.current);
       }
     };
   }, []);
 
-  return debouncedCallback as T;
-}
+  return debouncedCallback;
+};

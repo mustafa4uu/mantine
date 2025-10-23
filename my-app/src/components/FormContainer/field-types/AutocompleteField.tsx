@@ -8,7 +8,7 @@ interface AutocompleteFieldProps {
   label: string;
   placeholder?: string;
   required?: boolean;
-  value?: string; // now only the "value" (ID)
+  value?: string; // now only the "value" (ID) - string after transform
   onChange?: (value: string | null) => void; // return only ID
   error?: string;
   mode?: string;
@@ -25,9 +25,11 @@ const AutocompleteField: React.FC<AutocompleteFieldProps> = ({
   error,
   mode = "edit",
   maxLength,
+  ...rest
 }) => {
   const [options, setOptions] = useState<{ label: string; value: string }[]>([]);
   const [searchValue, setSearchValue] = useState('');
+  const [initialValueLoaded, setInitialValueLoaded] = useState(false);
 
   const disabled = mode === "view";
 
@@ -73,13 +75,57 @@ const AutocompleteField: React.FC<AutocompleteFieldProps> = ({
     [debouncedFetch]
   );
 
-  // Ensure edit mode option visible
+  // Load initial value label when component mounts or value changes
   useEffect(() => {
-    if (value && !options.find((opt) => opt.value === value)) {
-      // optional: fetch label for the ID if needed later
-      setOptions((prev) => [...prev]);
+    if (value && !initialValueLoaded) {
+      // Fetch the label for the initial value
+      const fetchInitialValue = async () => {
+        try {
+          // Using the same endpoint with empty search to get potential matches
+          const res = await fetch(
+            `https://cclm-poc.fermion.in/api/v1/customers/customer-name?name=`
+          );
+          const result = await res.json();
+          if (result.status === "OK" && Array.isArray(result.data)) {
+            const item = result.data.find((item: any) => 
+              String(item.id || item.value) === value
+            );
+            if (item) {
+              const option = {
+                label: item.name || item.label || String(item),
+                value: String(item.id || item.value),
+              };
+              setOptions(prev => {
+                if (!prev.find(opt => opt.value === option.value)) {
+                  return [option, ...prev];
+                }
+                return prev;
+              });
+              setSearchValue(option.label); // Set the display label
+            } else {
+              console.warn(`Initial value ${value} not found in default fetch. Consider implementing a fetch by ID endpoint.`);
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch initial value:", err);
+        } finally {
+          setInitialValueLoaded(true);
+        }
+      };
+
+      fetchInitialValue();
     }
-  }, [value, options]);
+  }, [value, initialValueLoaded]);
+
+  // Update searchValue when options change and a value is selected
+  useEffect(() => {
+    if (value) {
+      const selected = options.find(opt => opt.value === value);
+      if (selected && searchValue !== selected.label) {
+        setSearchValue(selected.label);
+      }
+    }
+  }, [options, value, searchValue]);
 
   return (
     <Select
@@ -87,7 +133,21 @@ const AutocompleteField: React.FC<AutocompleteFieldProps> = ({
       placeholder={placeholder || `Search ${label}`}
       data={options}
       value={value || ''}
-      onChange={(val) => onChange?.(val)} // only send value (ID)
+      onChange={(val) => {
+        if (val === null || val === '') {
+          setSearchValue('');
+          setOptions([]);
+          onChange?.(null);
+          return;
+        }
+        const selected = options.find(opt => opt.value === val);
+        if (selected) {
+          setSearchValue(selected.label);
+        } else {
+          setSearchValue(val);
+        }
+        onChange?.(val);
+      }}
       onSearchChange={handleSearchChange}
       searchValue={searchValue}
       searchable
@@ -96,6 +156,7 @@ const AutocompleteField: React.FC<AutocompleteFieldProps> = ({
       disabled={disabled}
       withAsterisk={required}
       nothingFoundMessage="No options found"
+      {...rest}
     />
   );
 };

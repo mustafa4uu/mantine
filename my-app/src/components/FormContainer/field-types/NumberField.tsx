@@ -22,6 +22,7 @@ const NumberField: React.FC<NumberFieldProps> = ({
   onChange,
   error,
   mode = "edit",
+  ...rest
 }) => {
   const disabled = mode === "view";
 
@@ -35,6 +36,7 @@ const NumberField: React.FC<NumberFieldProps> = ({
       disabled={disabled}
       withAsterisk={required}
       hideControls={disabled}
+      {...rest}
     />
   );
 };

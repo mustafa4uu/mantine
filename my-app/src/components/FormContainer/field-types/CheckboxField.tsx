@@ -22,6 +22,7 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
   error,
   mode = "edit",
   options = [],
+  ...rest
 }) => {
   const disabled = mode === "view";
 
@@ -34,6 +35,7 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
         onChange={(e) => onChange?.(e.target.checked)}
         error={error}
         disabled={disabled}
+        {...rest}
       />
     );
   }
@@ -54,6 +56,7 @@ const CheckboxField: React.FC<CheckboxFieldProps> = ({
             value={opt.value} 
             label={opt.label}
             disabled={disabled}
+            {...rest}
           />
         ))}
       </Group>

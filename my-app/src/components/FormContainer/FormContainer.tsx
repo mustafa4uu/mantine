@@ -6,7 +6,6 @@ import { IconAlertCircle } from '@tabler/icons-react';
 import FormComponent from './FormComponent';
 import './FormContainer.css';
 
-// Define interfaces locally since they're not imported
 interface FormField {
   fieldName: string;
   fieldType: string;
@@ -37,16 +36,8 @@ const FormContainer: React.FC<FormContainerProps> = ({
   onSubmit,
   isSubmitting = false,
 }) => {
-//   console.log({
-//   mode,
-//   fields,
-//   initialData,
-//   onSubmit,
-//   isSubmitting,
-// },'lllllllllll')
-  // Initialize React Hook Form
   const methods = useForm<FormSubmitData>({
-    mode: 'onChange',
+    mode: 'onBlur', // triggers validation on blur and submit
     defaultValues: {},
   });
 
@@ -54,92 +45,60 @@ const FormContainer: React.FC<FormContainerProps> = ({
     handleSubmit,
     reset,
     formState: { errors },
-    watch,
-    setValue,
   } = methods;
 
-  // Initialize form data
+  // Initialize form data when API returns
   useEffect(() => {
     const defaultValues: FormSubmitData = {};
-    
-    fields.forEach((field: FormField) => {
-      defaultValues[field.fieldName] = initialData[field.fieldName] ?? '';
+    fields.forEach((field) => {
+      let fieldValue = initialData[field.fieldName] ?? '';
+      // For AUTOCOMPLETE fields, extract the value (ID) if it's an object
+      if (field.fieldType === 'AUTOCOMPLETE' && typeof fieldValue === 'object' && fieldValue !== null && 'value' in fieldValue) {
+        fieldValue = fieldValue.value ?? '';
+      }
+      defaultValues[field.fieldName] = fieldValue;
     });
-    
     reset(defaultValues);
   }, [fields, initialData, reset]);
 
-  // Handle field changes with validation
-  const handleFieldChange = (name: string, value: any) => {
-    setValue(name, value, { shouldValidate: true });
-  };
-
-  // Handle form submission
   const onSubmitForm = (data: FormSubmitData) => {
     onSubmit(data);
   };
 
-  // Handle form reset
-  const handleReset = () => {
-    const defaultValues: FormSubmitData = {};
-    fields.forEach((field: FormField) => {
-      defaultValues[field.fieldName] = initialData[field.fieldName] ?? '';
-    });
-    reset(defaultValues);
-  };
-
-  // Watch all form values to pass to FormComponent
-  const formData = watch();
-
-  // Check if form has errors
   const hasErrors = Object.keys(errors).length > 0;
 
   return (
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(onSubmitForm)}>
         <Paper shadow="sm" p="md" radius="md" withBorder>
-          {/* Form Validation Alert */}
           {hasErrors && (
-            <Alert 
-              icon={<IconAlertCircle size={16} />} 
-              title="Form Validation Error" 
-              color="red" 
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Form Validation Error"
+              color="red"
               mb="lg"
             >
               Please fix the errors below before submitting the form.
             </Alert>
           )}
 
-          {/* Form Fields Grid */}
           <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
             {fields.map((field, index) => (
               <div key={field.fieldName || index} className="form-field-container">
                 <FormComponent
-                  fieldType={field.fieldType}
-                  name={field.fieldName}
-                  label={field.displayName}
-                  value={formData[field.fieldName]}
-                  onChange={(value: any) => handleFieldChange(field.fieldName, value)}
-                  options={field.dropDown}
-                  placeholder={field.displayName}
-                  maxLength={field.maxLength}
-                  required={field.isRequired}
-                  validationRegs={field.validationRegs}
-                  validationMsg={field.validationMsg}
+                  field={field}
                   mode={mode}
-                  error={errors[field.fieldName]?.message as string}
                 />
               </div>
             ))}
           </SimpleGrid>
 
-          {/* Form Actions */}
           <Group justify="flex-end" mt="xl">
             {mode !== 'edit' && (
               <Button
                 type="button"
                 variant="outline"
-                onClick={handleReset}
+                onClick={() => reset()}
                 disabled={isSubmitting}
               >
                 Reset All
@@ -148,9 +107,9 @@ const FormContainer: React.FC<FormContainerProps> = ({
             <Button
               type="submit"
               loading={isSubmitting}
-              disabled={isSubmitting || hasErrors}
+              disabled={isSubmitting}
             >
-              {mode === 'edit' ? 'Update Customer' : 'Add Customer'}
+              {mode === 'edit' ? 'Update Address' : 'Add New Address'}
             </Button>
           </Group>
         </Paper>

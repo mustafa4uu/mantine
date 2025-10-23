@@ -24,6 +24,7 @@ const TextField: React.FC<TextFieldProps> = ({
   onChange,
   error,
   mode = "edit",
+  ...rest
 }) => {
   const disabled = mode === "view";
 
@@ -37,6 +38,7 @@ const TextField: React.FC<TextFieldProps> = ({
       error={error}
       disabled={disabled}
       withAsterisk={required}
+      {...rest}
     />
   );
 };
