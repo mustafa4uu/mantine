@@ -1,0 +1,1 @@
+export const CUSTOMER_NAME_API = '/api/v1/customers/customer-name?name=';

@@ -13,20 +13,31 @@ export interface Customer {
   email?: string;
 }
 
+const customerColumns = [
+  { key: 'custName' as keyof Customer, header: 'Name', sortable: true },
+  { key: 'custId' as keyof Customer, header: 'Customer ID', sortable: true },
+  { key: 'mobileNumber' as keyof Customer, header: 'Phone', sortable: true },
+  { 
+    key: 'email' as keyof Customer, 
+    header: 'Email', 
+    sortable: true, 
+    cellRenderer: (value: any, _item: any) => value || 'N/A' 
+  },
+];
+
 const CustomerList: React.FC = () => {
-  const [offset, setOffset] = useState(0); // Start from offset 0
+  const [offset, setOffset] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [searchTerm, setSearchTerm] = useState(''); // Search state
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
-  // Debounce search term to avoid too many API calls
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-      setOffset(0); // Reset to first page when search changes
-    }, 500); // 500ms delay
+      setOffset(0);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -37,29 +48,23 @@ const CustomerList: React.FC = () => {
     placeholderData: keepPreviousData,
   });
 
-  // Calculate current page for display (1-based)
   const currentPage = Math.floor(offset / pageSize) + 1;
 
-  // Handle page change from the ListingTable component
   const handlePageChange = (page: number) => {
-    // Convert 1-based page to offset
     const newOffset = (page - 1) * pageSize;
     setOffset(newOffset);
   };
 
-  // Handle page size change
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
-    setOffset(0); // Reset to first page (offset 0)
+    setOffset(0);
   };
 
-  // Handle search change from ListingTable
   const handleSearchChange = (search: string) => {
     setSearchTerm(search);
   };
 
-  // Extract the actual data from the API response
-  let customers = (data as any)?.data?.data || [];
+  const customers = (data as any)?.data?.data || [];
   const totalItems = (data as any)?.data?.page?.totalRecords ?? 0;
 
   if (isError) {
@@ -85,16 +90,14 @@ const CustomerList: React.FC = () => {
       <Group justify="space-between" mb="md">
         <Title order={2} size="h3">
           Customers ({totalItems} total)
-          {debouncedSearchTerm && (
-            debouncedSearchTerm
-          )}
+          {debouncedSearchTerm && ` - Searching for "${debouncedSearchTerm}"`}
         </Title>
         <Button
-            component={Link}
-            to="/customer-details/add"
-            variant="filled"
-            >
-            Add New Customer
+          component={Link}
+          to="/customer-details/add"
+          variant="filled"
+        >
+          Add New Customer
         </Button>
       </Group>
 
@@ -103,13 +106,15 @@ const CustomerList: React.FC = () => {
           data={customers} 
           loading={isPending}
           pageSize={pageSize}
-          currentPage={currentPage} // Use calculated current page
+          currentPage={currentPage}
           totalItems={totalItems}
           searchTerm={searchTerm}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           onSearchChange={handleSearchChange}
           editPageUrl="/customer-details/"
+          columns={customerColumns}
+          searchPlaceholder="Search customers..."
         />
       </div>
     </Container>

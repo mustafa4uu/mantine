@@ -1,9 +1,7 @@
-// components/FormComponent/field-types/SelectField.tsx
-// (Updated to match Next.js logic for baseOptions)
 import React, { useMemo } from 'react';
 import { Select, Loader } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { fetchMasterData } from '../../../api/api';
+import { fetchBranches, fetchCountries, fetchAddressTypes } from '../../utils/common'; // Adjust path as needed
 
 interface SelectFieldProps {
   name: string;
@@ -16,15 +14,6 @@ interface SelectFieldProps {
   mode?: string;
   options?: { label: string; value: string; orderBy?: number; id?: number }[];
 }
-
-// Default address options (from Next.js)
-const AddressOptions = [
-  { label: "Permanent Address", value: "1", orderBy: 1 },
-  { label: "Communication Address", value: "2", orderBy: 2 },
-  { label: "Employer Address", value: "3", orderBy: 3 },
-  { label: "Factory Address", value: "4", orderBy: 4 },
-  { label: "Registered Address", value: "61", orderBy: 5 },
-];
 
 const SelectField: React.FC<SelectFieldProps> = ({
   name,
@@ -40,19 +29,27 @@ const SelectField: React.FC<SelectFieldProps> = ({
 }) => {
   const disabled = mode === "view";
 
-  // Fetch branches
+  // Fetch branches using separate utility
   const { data: branchData = [], isLoading: loadingBranches } = useQuery({
     queryKey: ['branches'],
-    queryFn: () => fetchMasterData('/api/v1/masters/branches'),
+    queryFn: fetchBranches,
     enabled: name === "locationCode",
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch countries
+  // Fetch countries using separate utility
   const { data: countryData = [], isLoading: loadingCountries } = useQuery({
     queryKey: ['countries'],
-    queryFn: () => fetchMasterData('/api/v1/masters/countries'),
+    queryFn: fetchCountries,
     enabled: name === "country",
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch address types using separate utility
+  const { data: addressTypeData = [], isLoading: loadingAddressTypes } = useQuery({
+    queryKey: ['addressTypes'],
+    queryFn: fetchAddressTypes,
+    enabled: name === "addressType",
     staleTime: 5 * 60 * 1000,
   });
 
@@ -74,6 +71,15 @@ const SelectField: React.FC<SelectFieldProps> = ({
     }));
   }, [countryData]);
 
+  // Transform address type data
+  const addressTypeOptions = useMemo(() => {
+    return addressTypeData.map((addr: any) => ({
+      label: addr.addressTypeName,
+      value: String(addr.addressTypeId),
+      id: addr.addressTypeId,
+    }));
+  }, [addressTypeData]);
+
   // Prepare select data (matching Next.js logic)
   const selectData = useMemo(() => {
     let baseOptions: { label: string; value: string }[] = [];
@@ -86,9 +92,13 @@ const SelectField: React.FC<SelectFieldProps> = ({
       baseOptions = loadingCountries
         ? [{ label: "Loading countries...", value: "loading" }]
         : countryOptions;
+    } else if (name === "addressType") {
+      baseOptions = loadingAddressTypes
+        ? [{ label: "Loading address types...", value: "loading" }]
+        : addressTypeOptions;
     } else {
-      // For other selects: AddressOptions + provided options (matching Next.js ternary)
-      baseOptions = [...AddressOptions, ...options];
+      // For other selects: use provided options
+      baseOptions = options;
     }
 
     // Filter out duplicates
@@ -105,9 +115,9 @@ const SelectField: React.FC<SelectFieldProps> = ({
     }
 
     return uniqueOptions;
-  }, [name, label, options, branchOptions, countryOptions, loadingBranches, loadingCountries]);
+  }, [name, label, options, branchOptions, countryOptions, addressTypeOptions, loadingBranches, loadingCountries, loadingAddressTypes]);
 
-  const isLoading = (loadingBranches && name === "locationCode") || (loadingCountries && name === "country");
+  const isLoading = (loadingBranches && name === "locationCode") || (loadingCountries && name === "country") || (loadingAddressTypes && name === "addressType");
 
   return (
     <Select
@@ -121,7 +131,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
       withAsterisk={required}
       rightSection={isLoading ? <Loader size="xs" /> : undefined}
       clearable={!required}
-      nothingFoundMessage={name === "locationCode" ? "No branches found" : name === "country" ? "No countries found" : "No options found"}
+      nothingFoundMessage={name === "locationCode" ? "No branches found" : name === "country" ? "No countries found" : name === "addressType" ? "No address types found" : "No options found"}
       {...rest}
     />
   );

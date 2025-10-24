@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react'; 
 import {
   Table,
   Group,
@@ -13,16 +13,8 @@ import { IconArrowUp, IconArrowDown, IconEdit, IconTrash } from '@tabler/icons-r
 import TableControls from './TableControls';
 import ListingPagination from './ListingPagination';
 
-interface Customer {
-  masterId: number;
-  custId: string;
-  custName: string;
-  mobileNumber: string;
-  email?: string;
-}
-
-interface ListingTableProps {
-  data: Customer[];
+export interface ListingTableProps<T extends { masterId: number }> {
+  data: T[];
   loading?: boolean;
   pageSize?: number;
   currentPage?: number;
@@ -32,12 +24,20 @@ interface ListingTableProps {
   onPageSizeChange?: (pageSize: number) => void;
   onSearchChange?: (searchTerm: string) => void;
   editPageUrl?: string;
+  columns: Array<{
+    key: keyof T;
+    header: string;
+    sortable?: boolean;
+    cellRenderer?: (value: T[keyof T], item: T) => React.ReactNode;
+  }>;
+  searchPlaceholder?: string;
+  onDelete?: (id: number) => void;
 }
 
-type SortField = keyof Customer | null;
+type SortField<T> = keyof T | null;
 type SortDirection = 'asc' | 'desc';
 
-const ListingTable: React.FC<ListingTableProps> = ({
+const ListingTable = <T extends { masterId: number }>({
   data,
   loading = false,
   pageSize = 10,
@@ -48,13 +48,16 @@ const ListingTable: React.FC<ListingTableProps> = ({
   onPageSizeChange,
   onSearchChange,
   editPageUrl,
-}) => {
+  columns,
+  searchPlaceholder = 'Search...',
+  onDelete,
+}: ListingTableProps<T>) => {
   const [pageSizeState, setPageSizeState] = useState(pageSize);
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
-  const [sortField, setSortField] = useState<SortField>(null);
+  const [sortField, setSortField] = useState<SortField<T>>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  // Only client-side sorting (search is now server-side)
+  // Client-side sorting
   const sortedData = useMemo(() => {
     if (!sortField) return data;
 
@@ -62,20 +65,31 @@ const ListingTable: React.FC<ListingTableProps> = ({
     sorted.sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
-      
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        return sortDirection === 'asc' 
-          ? aValue.localeCompare(bValue)
-          : bValue.localeCompare(aValue);
+
+      // Handle null/undefined
+      if (aValue == null) return sortDirection === 'asc' ? 1 : -1;
+      if (bValue == null) return sortDirection === 'asc' ? -1 : 1;
+
+      if (typeof aValue === typeof bValue) {
+        if (typeof aValue === 'string') {
+          return sortDirection === 'asc'
+            ? (aValue as string).localeCompare(bValue as string)
+            : (bValue as string).localeCompare(aValue as string);
+        } else if (typeof aValue === 'number') {
+          return sortDirection === 'asc'
+            ? (aValue as number) - (bValue as number)
+            : (bValue as number) - (aValue as number);
+        }
       }
-      
+
+      // Fallback to string comparison
       return sortDirection === 'asc'
-        ? (aValue as any) - (bValue as any)
-        : (bValue as any) - (aValue as any);
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
     });
 
     return sorted;
-  }, [data, sortField, sortDirection]);
+  }, [data, sortField, sortDirection] as const);
 
   // Use sorted data for display
   const displayData = sortedData;
@@ -85,7 +99,7 @@ const ListingTable: React.FC<ListingTableProps> = ({
   const startIndex = (currentPage - 1) * pageSizeState;
 
   // Handle sorting
-  const handleSort = (field: keyof Customer) => {
+  const handleSort = (field: keyof T) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
@@ -112,31 +126,38 @@ const ListingTable: React.FC<ListingTableProps> = ({
   };
 
   // Table rows
-  const rows = displayData.map((customer, index) => (
-    <Table.Tr key={customer.masterId}>
-      <Table.Td>
-        {startIndex + index + 1}
-      </Table.Td>
-      <Table.Td>{customer.custName}</Table.Td>
-      <Table.Td>{customer.custId}</Table.Td>
-      <Table.Td>{customer.mobileNumber}</Table.Td>
-      <Table.Td>{customer.email || 'N/A'}</Table.Td>
+  const rows = displayData.map((item, index) => (
+    <Table.Tr key={item.masterId}>
+      <Table.Td>{startIndex + index + 1}</Table.Td>
+      {columns.map((col) => (
+        <Table.Td key={String(col.key)}>
+          {col.cellRenderer 
+            ? col.cellRenderer(item[col.key], item) 
+            : String(item[col.key] ?? '')
+          }
+        </Table.Td>
+      ))}
       <Table.Td>
         <Group gap="xs">
-          <ActionIcon
-            component={Link}
-            to={`${editPageUrl}edit/${customer.masterId}`}
-            variant="subtle"
-            color="blue"
-          >
-            <IconEdit size={16} />
-          </ActionIcon>
+          {editPageUrl && (
+            <ActionIcon
+              component={Link}
+              to={`${editPageUrl}edit/${item.masterId}`}
+              variant="subtle"
+              color="blue"
+            >
+              <IconEdit size={16} />
+            </ActionIcon>
+          )}
           <ActionIcon
             variant="subtle"
             color="red"
             onClick={() => {
-              // Handle delete functionality
-              console.log('Delete customer:', customer.masterId);
+              if (onDelete) {
+                onDelete(item.masterId);
+              } else {
+                console.log('Delete item:', item.masterId);
+              }
             }}
           >
             <IconTrash size={16} />
@@ -147,10 +168,12 @@ const ListingTable: React.FC<ListingTableProps> = ({
   ));
 
   // Sort icon
-  const getSortIcon = (field: keyof Customer) => {
+  const getSortIcon = (field: keyof T) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? <IconArrowUp size={14} /> : <IconArrowDown size={14} />;
   };
+
+  const colSpan = columns.length + 2; // # + columns + actions
 
   return (
     <Paper shadow="sm" p="md" radius="md" withBorder>
@@ -163,7 +186,7 @@ const ListingTable: React.FC<ListingTableProps> = ({
           onSearchChange={handleSearchChange}
           pageSize={pageSizeState}
           onPageSizeChange={handlePageSizeChange}
-          searchPlaceholder="Search customers..."
+          searchPlaceholder={searchPlaceholder}
         />
 
         {/* Table */}
@@ -171,30 +194,22 @@ const ListingTable: React.FC<ListingTableProps> = ({
           <Table.Thead>
             <Table.Tr>
               <Table.Th>#</Table.Th>
-              <Table.Th>
-                <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => handleSort('custName')}>
-                  Name
-                  {getSortIcon('custName')}
-                </Group>
-              </Table.Th>
-              <Table.Th>
-                <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => handleSort('custId')}>
-                  Customer ID
-                  {getSortIcon('custId')}
-                </Group>
-              </Table.Th>
-              <Table.Th>
-                <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => handleSort('mobileNumber')}>
-                  Phone
-                  {getSortIcon('mobileNumber')}
-                </Group>
-              </Table.Th>
-              <Table.Th>
-                <Group gap="xs" style={{ cursor: 'pointer' }} onClick={() => handleSort('email')}>
-                  Email
-                  {getSortIcon('email')}
-                </Group>
-              </Table.Th>
+              {columns.map((col) => (
+                <Table.Th key={String(col.key)}>
+                  {col.sortable ? (
+                    <Group 
+                      gap="xs" 
+                      style={{ cursor: 'pointer' }} 
+                      onClick={() => handleSort(col.key)}
+                    >
+                      {col.header}
+                      {getSortIcon(col.key)}
+                    </Group>
+                  ) : (
+                    col.header
+                  )}
+                </Table.Th>
+              ))}
               <Table.Th>Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
@@ -203,9 +218,9 @@ const ListingTable: React.FC<ListingTableProps> = ({
               rows
             ) : (
               <Table.Tr>
-                <Table.Td colSpan={6} style={{ textAlign: 'center' }}>
+                <Table.Td colSpan={colSpan} style={{ textAlign: 'center' }}>
                   <Text c="dimmed" py="xl">
-                    {loading ? 'Loading...' : 'No customers found'}
+                    {loading ? 'Loading...' : 'No items found'}
                   </Text>
                 </Table.Td>
               </Table.Tr>

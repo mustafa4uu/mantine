@@ -66,3 +66,15 @@ export const fetchMasterData = async (endpoint: string): Promise<any[]> => {
     return [];
   }
 };
+
+export const fetchAutoData = async (endpoint: string, searchTerm: string): Promise<any[]> => {
+  try {
+    const res: AxiosResponse<any> = await api.get(
+      `${endpoint}${searchTerm}`
+    );
+    return res.status === 200 ?  res.data || [] : [];
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    return [];
+  }
+};

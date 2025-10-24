@@ -1,15 +1,13 @@
-// components/FormComponent/FormComponent.tsx
-// (Unchanged from provided)
 import React from 'react';
 import { useFormContext, Controller } from 'react-hook-form';
-import TextField from './field-types/TextField';
-import DateField from './field-types/DateField';
-import SelectField from './field-types/SelectField';
-import AutocompleteField from './field-types/AutocompleteField';
-import TextareaField from './field-types/TextareaField';
-import NumberField from './field-types/NumberField';
-import RadioField from './field-types/RadioField';
-import CheckboxField from './field-types/CheckboxField';
+import TextField from '../field-types/TextField';
+import DateField from '../field-types/DateField';
+import SelectField from '../field-types/SelectField';
+import AutocompleteField from '../field-types/AutocompleteField';
+import TextareaField from '../field-types/TextareaField';
+import NumberField from '../field-types/NumberField';
+import RadioField from '../field-types/RadioField';
+import CheckboxField from '../field-types/CheckboxField';
 
 interface FormField {
   fieldName: string;

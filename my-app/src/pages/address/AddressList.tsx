@@ -9,58 +9,80 @@ export interface Address {
   masterId: number;
   custId: string;
   custName: string;
-  mobileNumber: string;
-  email?: string;
+  city: string;
+  state: string;
+  pinCode: string;
+  mobileNo: string;
+  emailId?: string;
+  customerId?: {
+    label: string;
+    value: string;
+  };
 }
 
+const addressColumns = [
+  { key: 'custName' as keyof Address, header: 'Customer Name', sortable: true },
+  { key: 'custId' as keyof Address, header: 'Cust Id', sortable: true },
+  { key: 'mobileNo' as keyof Address, header: 'Mobile No', sortable: true },
+  { 
+    key: 'emailId' as keyof Address, 
+    header: 'Email', 
+    sortable: true, 
+    cellRenderer: (value: any, _item: any) => value || 'N/A' 
+  },
+  { key: 'city' as keyof Address, header: 'City', sortable: true },
+  { key: 'state' as keyof Address, header: 'State', sortable: true },
+  { key: 'pinCode' as keyof Address, header: 'PIN Code', sortable: true },
+];
+
 const AddressList: React.FC = () => {
-  const [offset, setOffset] = useState(0); // Start from offset 0
+  const [offset, setOffset] = useState(0);
   const [pageSize, setPageSize] = useState(10);
-  const [searchTerm, setSearchTerm] = useState(''); // Search state
+  const [searchTerm, setSearchTerm] = useState('');
   const queryClient = useQueryClient();
 
-  // Debounce search term to avoid too many API calls
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchTerm(searchTerm);
-      setOffset(0); // Reset to first page when search changes
-    }, 500); // 500ms delay
+      setOffset(0);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["address", offset, pageSize, debouncedSearchTerm],
+    queryKey: ["addresses", offset, pageSize, debouncedSearchTerm],
     queryFn: () => fetchPaginatedData('/api/v1/customers/address/list', debouncedSearchTerm, offset, pageSize),
     placeholderData: keepPreviousData,
   });
 
-  // Calculate current page for display (1-based)
   const currentPage = Math.floor(offset / pageSize) + 1;
 
-  // Handle page change from the ListingTable component
   const handlePageChange = (page: number) => {
-    // Convert 1-based page to offset
     const newOffset = (page - 1) * pageSize;
     setOffset(newOffset);
   };
 
-  // Handle page size change
   const handlePageSizeChange = (newPageSize: number) => {
     setPageSize(newPageSize);
-    setOffset(0); // Reset to first page (offset 0)
+    setOffset(0);
   };
 
-  // Handle search change from ListingTable
   const handleSearchChange = (search: string) => {
     setSearchTerm(search);
   };
 
-  // Extract the actual data from the API response
-  let customers = (data as any)?.data?.data || [];
+  let rawAddresses = (data as any)?.data?.data || [];
   const totalItems = (data as any)?.data?.page?.totalRecords ?? 0;
+
+  // Transform the data to set custName and custId from customerId
+  const addresses: Address[] = rawAddresses.map((item: any) => ({
+    ...item,
+    custName: item.customerId?.label || 'N/A',
+    custId: item.customerId?.value || 'N/A',
+  }));
 
   if (isError) {
     return (
@@ -70,7 +92,7 @@ const AddressList: React.FC = () => {
             Error: {error.message || "Something went wrong!"}
           </Title>
           <Button 
-            onClick={() => queryClient.refetchQueries({ queryKey: ['customers'] })} 
+            onClick={() => queryClient.refetchQueries({ queryKey: ['addresses'] })} 
             style={{ marginTop: '20px' }}
           >
             Retry
@@ -84,32 +106,32 @@ const AddressList: React.FC = () => {
     <Container p={10} m={0}>
       <Group justify="space-between" mb="md">
         <Title order={2} size="h3">
-          Customers ({totalItems} total)
-          {debouncedSearchTerm && (
-            debouncedSearchTerm
-          )}
+          Addresses ({totalItems} total)
+          {debouncedSearchTerm && ` - Searching for "${debouncedSearchTerm}"`}
         </Title>
         <Button
-            component={Link}
-            to="/customer-address/add"
-            variant="filled"
-            >
-            Add New Customer
+          component={Link}
+          to="/customer-address/add"
+          variant="filled"
+        >
+          Add New Address
         </Button>
       </Group>
 
       <div style={{ width: '100%' }}>
         <ListingTable 
-          data={customers} 
+          data={addresses} 
           loading={isPending}
           pageSize={pageSize}
-          currentPage={currentPage} // Use calculated current page
+          currentPage={currentPage}
           totalItems={totalItems}
           searchTerm={searchTerm}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           onSearchChange={handleSearchChange}
           editPageUrl="/customer-address/"
+          columns={addressColumns}
+          searchPlaceholder="Search addresses..."
         />
       </div>
     </Container>
