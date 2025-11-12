@@ -23,30 +23,47 @@ interface FormField {
 interface FormComponentProps {
   field: FormField;
   mode?: string;
+  isSaveAsDraft?: boolean;
+  isFirstField?: boolean;
 }
 
-const FormComponent: React.FC<FormComponentProps> = ({ field, mode }) => {
+const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraft, isFirstField }) => {
   const { control, formState: { errors } } = useFormContext();
-
   const validationRules: Record<string, any> = {};
 
-  if (field.isRequired) {
+  if ((!isSaveAsDraft && field.isRequired) || (isSaveAsDraft && isFirstField && field.isRequired)) {
     validationRules.required = `${field.displayName} is required`;
   }
-
-  if (field.validationRegs) {
+  // if (field.isRequired) {
+  //   validationRules.required = `${field.displayName} is required`;
+  // }
+  // Only apply pattern validation when not in draft mode
+  if (!isSaveAsDraft && field.validationRegs) {
     validationRules.pattern = {
       value: new RegExp(field.validationRegs),
       message: field.validationMsg || `${field.displayName} is invalid`,
     };
   }
+  // if (field.validationRegs) {
+  //   validationRules.pattern = {
+  //     value: new RegExp(field.validationRegs),
+  //     message: field.validationMsg || `${field.displayName} is invalid`,
+  //   };
+  // }
 
-  if (field.maxLength) {
+  // Only apply maxLength validation when not in draft mode
+  if (!isSaveAsDraft && field.maxLength) {
     validationRules.maxLength = {
       value: field.maxLength,
       message: `${field.displayName} must be at most ${field.maxLength} characters`,
     };
   }
+  // if (field.maxLength) {
+  //   validationRules.maxLength = {
+  //     value: field.maxLength,
+  //     message: `${field.displayName} must be at most ${field.maxLength} characters`,
+  //   };
+  // }
 
   const error = errors[field.fieldName]?.message as string | undefined;
 
@@ -63,7 +80,8 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode }) => {
           onChange,
           error,
           mode,
-          required: field.isRequired,
+          // required: field.isRequired,
+          required: field.isRequired && (!isSaveAsDraft || isFirstField), // Update required prop
           maxLength: field.maxLength,
           placeholder: field.displayName,
         };

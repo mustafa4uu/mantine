@@ -1,5 +1,5 @@
 // components/FormContainer/FormContainer.tsx
-import React, { useEffect } from 'react';
+import React, {useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Paper, SimpleGrid, Button, Group, Alert } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -36,6 +36,7 @@ const FormContainer: React.FC<FormContainerProps> = ({
   onSubmit,
   isSubmitting = false,
 }) => {
+  const [isSaveAsDraft, setIsSaveAsDraft] = useState(false);
   const methods = useForm<FormSubmitData>({
     mode: 'onBlur', // triggers validation on blur and submit
     defaultValues: {},
@@ -66,7 +67,6 @@ const FormContainer: React.FC<FormContainerProps> = ({
   };
 
   const hasErrors = Object.keys(errors).length > 0;
-
   return (
     <FormProvider {...methods}>
       <form onSubmit={handleSubmit(onSubmitForm)}>
@@ -88,6 +88,8 @@ const FormContainer: React.FC<FormContainerProps> = ({
                 <FormComponent
                   field={field}
                   mode={mode}
+                  isSaveAsDraft={isSaveAsDraft}
+                  isFirstField={index === 0}
                 />
               </div>
             ))}
@@ -104,6 +106,14 @@ const FormContainer: React.FC<FormContainerProps> = ({
                 Reset All
               </Button>
             )}
+            <Button
+              type="submit"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+              onClick={() => setIsSaveAsDraft(true)}
+            >
+              Save as Draft
+            </Button>
             <Button
               type="submit"
               loading={isSubmitting}
