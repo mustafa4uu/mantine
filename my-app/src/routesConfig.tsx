@@ -4,6 +4,8 @@ import CustomerFormPage from "./pages/customer/CustomerForm";
 import AddressList from "./pages/address/AddressList";
 import AddressForm from "./pages/address/AddressForm";
 
+import AddCollateral from "./pages/collateral/AddCollateral";
+
 export const routesConfig = [
     { path: "/customer-details", element: <CustomerList /> },
     { path: "/customer-details/add", element: <CustomerFormPage /> },  
@@ -11,4 +13,5 @@ export const routesConfig = [
     { path: "/customer-address", element: <AddressList /> },
     { path: "/customer-address/add", element: <AddressForm /> },  
     { path: "/customer-address/edit/:id", element: <AddressForm /> },
+    { path: "/onboarding", element: <AddCollateral /> },
 ];
