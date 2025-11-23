@@ -14,6 +14,7 @@ interface FormField {
   fieldType: string;
   displayName: string;
   isRequired: boolean;
+  isVisible?: boolean; // New visibility field
   validationRegs?: string;
   validationMsg?: string;
   maxLength?: number;
@@ -31,39 +32,45 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
   const { control, formState: { errors } } = useFormContext();
   const validationRules: Record<string, any> = {};
 
+  // If field is not visible, skip all validation
+  if (field.isVisible === false) {
+    return (
+      <Controller
+        name={field.fieldName}
+        control={control}
+        render={({ field: { onChange, value } }) => {
+          // Hidden input to maintain form data even when field is not visible
+          return (
+            <input
+              type="hidden"
+              name={field.fieldName}
+              value={value ?? ''}
+              onChange={onChange}
+            />
+          );
+        }}
+      />
+    );
+  }
+
+  // Apply validation rules only for visible fields
   if ((!isSaveAsDraft && field.isRequired) || (isSaveAsDraft && isFirstField && field.isRequired)) {
     validationRules.required = `${field.displayName} is required`;
   }
-  // if (field.isRequired) {
-  //   validationRules.required = `${field.displayName} is required`;
-  // }
-  // Only apply pattern validation when not in draft mode
+
   if (!isSaveAsDraft && field.validationRegs) {
     validationRules.pattern = {
       value: new RegExp(field.validationRegs),
       message: field.validationMsg || `${field.displayName} is invalid`,
     };
   }
-  // if (field.validationRegs) {
-  //   validationRules.pattern = {
-  //     value: new RegExp(field.validationRegs),
-  //     message: field.validationMsg || `${field.displayName} is invalid`,
-  //   };
-  // }
 
-  // Only apply maxLength validation when not in draft mode
   if (!isSaveAsDraft && field.maxLength) {
     validationRules.maxLength = {
       value: field.maxLength,
       message: `${field.displayName} must be at most ${field.maxLength} characters`,
     };
   }
-  // if (field.maxLength) {
-  //   validationRules.maxLength = {
-  //     value: field.maxLength,
-  //     message: `${field.displayName} must be at most ${field.maxLength} characters`,
-  //   };
-  // }
 
   const error = errors[field.fieldName]?.message as string | undefined;
 
@@ -80,8 +87,7 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
           onChange,
           error,
           mode,
-          // required: field.isRequired,
-          required: field.isRequired && (!isSaveAsDraft || isFirstField), // Update required prop
+          required: field.isRequired && (!isSaveAsDraft || isFirstField),
           maxLength: field.maxLength,
           placeholder: field.displayName,
         };
