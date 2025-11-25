@@ -14,7 +14,7 @@ interface FormField {
   fieldType: string;
   displayName: string;
   isRequired: boolean;
-  isVisible?: boolean; // New visibility field
+  isVisible?: boolean;
   validationRegs?: string;
   validationMsg?: string;
   maxLength?: number;
@@ -38,26 +38,25 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
       <Controller
         name={field.fieldName}
         control={control}
-        render={({ field: { onChange, value } }) => {
-          // Hidden input to maintain form data even when field is not visible
-          return (
-            <input
-              type="hidden"
-              name={field.fieldName}
-              value={value ?? ''}
-              onChange={onChange}
-            />
-          );
-        }}
+        render={({ field: { onChange, value } }) => (
+          <input
+            type="hidden"
+            name={field.fieldName}
+            value={value ?? ''}
+            onChange={onChange}
+          />
+        )}
       />
     );
   }
 
-  // Apply validation rules only for visible fields
-  if ((!isSaveAsDraft && field.isRequired) || (isSaveAsDraft && isFirstField && field.isRequired)) {
+  // Apply required validation: All in normal mode; only first required in draft
+  const shouldValidateRequired = (!isSaveAsDraft && field.isRequired) || (isSaveAsDraft && isFirstField && field.isRequired);
+  if (shouldValidateRequired) {
     validationRules.required = `${field.displayName} is required`;
   }
 
+  // Other validations only in normal mode
   if (!isSaveAsDraft && field.validationRegs) {
     validationRules.pattern = {
       value: new RegExp(field.validationRegs),
@@ -87,7 +86,7 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
           onChange,
           error,
           mode,
-          required: field.isRequired && (!isSaveAsDraft || isFirstField),
+          required: shouldValidateRequired, // Consistent with validation rule (star only where enforced)
           maxLength: field.maxLength,
           placeholder: field.displayName,
         };

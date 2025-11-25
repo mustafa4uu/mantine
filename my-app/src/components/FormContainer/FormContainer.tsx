@@ -1,5 +1,5 @@
 // components/FormContainer/FormContainer.tsx
-import React, {useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { Paper, SimpleGrid, Button, Group, Alert } from '@mantine/core';
 import { IconAlertCircle } from '@tabler/icons-react';
@@ -38,13 +38,16 @@ const FormContainer: React.FC<FormContainerProps> = ({
 }) => {
   const [isSaveAsDraft, setIsSaveAsDraft] = useState(false);
   const methods = useForm<FormSubmitData>({
-    mode: 'onBlur', // triggers validation on blur and submit
+    mode: 'onSubmit', // Validate only on submit (prevents sticky onBlur errors in draft)
     defaultValues: {},
   });
 
   const {
     handleSubmit,
     reset,
+    clearErrors,
+    getValues,
+    trigger, // Added: For triggering first field validation
     formState: { errors },
   } = methods;
 
@@ -63,7 +66,31 @@ const FormContainer: React.FC<FormContainerProps> = ({
   }, [fields, initialData, reset]);
 
   const onSubmitForm = (data: FormSubmitData) => {
+    setIsSaveAsDraft(false); // Ensure full mode after successful submit
     onSubmit(data);
+  };
+
+  // Updated: Draft handler - validate first field, then partial save if valid
+  const onDraftSubmit = async () => {
+    setIsSaveAsDraft(true); // Apply draft mode (stars/rules only on first field)
+    clearErrors(); // Clear all existing errors
+
+    // Validate only the first field ('custId')
+    const isFirstFieldValid = await trigger('custId');
+
+    // If first field is invalid, stop here (error will show via FormComponent/alert)
+    // No submit happens; user must fill it
+    if (!isFirstFieldValid) {
+      console.log('Draft failed: First field (custId) is required');
+      return; // Block submit, error displays
+    }
+
+    // First field is valid: Proceed with partial save
+    const data = getValues();
+    onSubmit({ ...data, isDraft: true }); // Pass data + draft flag for backend
+
+    // Reset to normal mode after save
+    setTimeout(() => setIsSaveAsDraft(false), 0);
   };
 
   const hasErrors = Object.keys(errors).length > 0;
@@ -89,7 +116,7 @@ const FormContainer: React.FC<FormContainerProps> = ({
                   field={field}
                   mode={mode}
                   isSaveAsDraft={isSaveAsDraft}
-                  isFirstField={index === 0}
+                  isFirstField={field.fieldName === 'custId'} // First required field: 'custId'
                 />
               </div>
             ))}
@@ -107,10 +134,10 @@ const FormContainer: React.FC<FormContainerProps> = ({
               </Button>
             )}
             <Button
-              type="submit"
+              type="button" // Not submit, to avoid full handleSubmit
               loading={isSubmitting}
               disabled={isSubmitting}
-              onClick={() => setIsSaveAsDraft(true)}
+              onClick={onDraftSubmit} // Custom handler with first-field validation
             >
               Save as Draft
             </Button>
@@ -118,6 +145,7 @@ const FormContainer: React.FC<FormContainerProps> = ({
               type="submit"
               loading={isSubmitting}
               disabled={isSubmitting}
+              onClick={() => setIsSaveAsDraft(false)} // Full validation mode
             >
               {mode === 'edit' ? 'Update Address' : 'Add New Address'}
             </Button>
