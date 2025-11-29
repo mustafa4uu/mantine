@@ -1,5 +1,5 @@
 import React from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import { useFormContext, Controller, useWatch } from 'react-hook-form';
 import TextField from '../field-types/TextField';
 import DateField from '../field-types/DateField';
 import SelectField from '../field-types/SelectField';
@@ -30,8 +30,9 @@ interface FormComponentProps {
 
 const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraft, isFirstField }) => {
   const { control, formState: { errors } } = useFormContext();
+  const locationCodeValue = useWatch({ control, name: 'locationCode' });
   const validationRules: Record<string, any> = {};
-
+  
   // If field is not visible, skip all validation
   if (field.isVisible === false) {
     return (
@@ -97,7 +98,14 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
           case 'DATE':
             return <DateField {...commonProps} />;
           case 'SELECT':
-            return <SelectField {...commonProps} options={field.dropDown} />;
+            const selectProps = {
+              ...commonProps,
+              options: field.dropDown,
+            };
+            if (field.fieldName === 'country') {
+              selectProps.branchId = locationCodeValue;
+            }
+            return <SelectField {...selectProps} />;
           case 'AUTOCOMPLETE':
             return <AutocompleteField {...commonProps} />;
           case 'TEXTAREA':
