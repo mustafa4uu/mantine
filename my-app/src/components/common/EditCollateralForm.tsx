@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Button, TextInput, Select, NumberInput, Group, Stack, Title, Box } from '@mantine/core';
-import { IconPlus, IconMinus } from '@tabler/icons-react';
+import { Button, TextInput, Select, NumberInput, Group, Stack, Accordion } from '@mantine/core';
+import { useForm } from '@mantine/form';
+import { IconChevronDown } from '@tabler/icons-react';
 
 const EditCollateralForm = () => {
-  const [active, setActive] = useState(0); // Track active section index (0 for first open by default)
+  const [active, setActive] = useState<string | null>('0'); // Track active accordion index, first open by default
 
   // Sample data for selects
   const propertyTypes = ['Apartment', 'House', 'Commercial Building', 'Land'];
@@ -12,34 +13,65 @@ const EditCollateralForm = () => {
   const ownershipNatures = ['Sole Ownership', 'Joint Ownership', 'Trust'];
   const measurementUnits = ['Sq Ft', 'Sq M', 'Acres', 'Hectares'];
 
-  // Form state (simplified, use useForm for full validation)
-  const [formValues, setFormValues] = useState({
-    propertyType: '',
-    propertyPurpose: '',
-    ownershipType: '',
-    ownershipNature: '',
-    purchaseLeaseDate: null,
-    leaseExpiryDate: null,
-    leasePeriodAvailable: 0,
-    registeredOwner: '',
-    registrationNumber: '',
-    numberOfUnits: 0,
-    measurementUnit: '',
-    propertySize: 0,
-    // Add more for other sections as needed
+  // Proper form handling with useForm
+  const form = useForm({
+    initialValues: {
+      propertyType: '',
+      propertyPurpose: '',
+      ownershipType: '',
+      ownershipNature: '',
+      leasePeriodAvailable: 0,
+      registeredOwner: '',
+      registrationNumber: '',
+      numberOfUnits: 0,
+      measurementUnit: '',
+      propertySize: 0,
+      // Add fields for other sections as needed, e.g.,
+      // valuationAmount: '',
+      // valuatorName: '',
+      // streetAddress: '',
+      // city: '',
+      // state: '',
+      // zipCode: '',
+      // country: '',
+      // additionalNotes: '',
+      // collateralMapping: '',
+    },
   });
 
-  const updateFormValue = (key:any, value:any) => {
-    setFormValues(prev => ({ ...prev, [key]: value }));
+  const handleSaveDraft = (values: typeof form.values) => {
+    console.log('Save as Draft:', values);
+    // Implement draft save logic here (e.g., API call)
   };
 
-  const toggleSection = (sectionId:any) => {
-    setActive(active === sectionId ? -1 : sectionId);
+  const handleSaveAndClose = (values: typeof form.values) => {
+    console.log('Save and Close:', values);
+    // Implement save and close logic here (e.g., API call, then navigate away)
+  };
+
+  const handleNext = () => {
+    if (form.validate()) {
+      console.log('Next clicked, form valid:', form.values);
+      // Implement next logic here (e.g., navigate to next page)
+    }
+  };
+
+  const clearPropertyDetails = () => {
+    form.setFieldValue('propertyType', '');
+    form.setFieldValue('propertyPurpose', '');
+    form.setFieldValue('ownershipType', '');
+    form.setFieldValue('ownershipNature', '');
+    form.setFieldValue('leasePeriodAvailable', 0);
+    form.setFieldValue('registeredOwner', '');
+    form.setFieldValue('registrationNumber', '');
+    form.setFieldValue('numberOfUnits', 0);
+    form.setFieldValue('measurementUnit', '');
+    form.setFieldValue('propertySize', 0);
   };
 
   const sections = [
     {
-      id: 0,
+      value: '0',
       title: 'Property Details',
       content: (
         <Stack gap="md">
@@ -48,24 +80,21 @@ const EditCollateralForm = () => {
               label="Property Type*"
               placeholder="Select property type"
               data={propertyTypes}
-              value={formValues.propertyType}
-              onChange={(value) => updateFormValue('propertyType', value)}
+              {...form.getInputProps('propertyType')}
               required
             />
             <Select
               label="Property Purpose*"
               placeholder="Select purpose"
               data={propertyPurposes}
-              value={formValues.propertyPurpose}
-              onChange={(value) => updateFormValue('propertyPurpose', value)}
+              {...form.getInputProps('propertyPurpose')}
               required
             />
             <Select
               label="Ownership Type*"
               placeholder="Select ownership type"
               data={ownershipTypes}
-              value={formValues.ownershipType}
-              onChange={(value) => updateFormValue('ownershipType', value)}
+              {...form.getInputProps('ownershipType')}
               required
             />
           </Group>
@@ -73,154 +102,171 @@ const EditCollateralForm = () => {
             label="Ownership Nature*"
             placeholder="Select ownership nature"
             data={ownershipNatures}
-            value={formValues.ownershipNature}
-            onChange={(value) => updateFormValue('ownershipNature', value)}
+            {...form.getInputProps('ownershipNature')}
             required
           />
-          {/* <Group grow>
-            <DatePicker
-              label="Purchase/Lease Date"
-              placeholder="Pick a date"
-              value={formValues.purchaseLeaseDate}
-              onChange={(value) => updateFormValue('purchaseLeaseDate', value)}
-            />
-            <DatePicker
-              label="Lease Expiry Date*"
-              placeholder="Pick a date"
-              value={formValues.leaseExpiryDate}
-              onChange={(value) => updateFormValue('leaseExpiryDate', value)}
-              required
-            />
-          </Group> */}
           <NumberInput
             label="Lease Period Available (Number of years)*"
             placeholder="0"
-            value={formValues.leasePeriodAvailable}
-            onChange={(value) => updateFormValue('leasePeriodAvailable', value)}
+            {...form.getInputProps('leasePeriodAvailable')}
             required
           />
           <TextInput
             label="Registered Owner*"
             placeholder="Enter owner name"
-            value={formValues.registeredOwner}
-            onChange={(e) => updateFormValue('registeredOwner', e.currentTarget.value)}
+            {...form.getInputProps('registeredOwner')}
             required
           />
           <TextInput
             label="Registration Number"
             placeholder="Enter registration number"
-            value={formValues.registrationNumber}
-            onChange={(e) => updateFormValue('registrationNumber', e.currentTarget.value)}
+            {...form.getInputProps('registrationNumber')}
           />
           <Group grow>
             <NumberInput
               label="Number of Units"
               placeholder="0"
-              value={formValues.numberOfUnits}
-              onChange={(value) => updateFormValue('numberOfUnits', value)}
+              {...form.getInputProps('numberOfUnits')}
             />
             <Select
               label="Measurement Unit"
               placeholder="Select unit"
               data={measurementUnits}
-              value={formValues.measurementUnit}
-              onChange={(value) => updateFormValue('measurementUnit', value)}
+              {...form.getInputProps('measurementUnit')}
             />
             <NumberInput
               label="Property Size"
               placeholder="0"
-              value={formValues.propertySize}
-              onChange={(value) => updateFormValue('propertySize', value)}
+              {...form.getInputProps('propertySize')}
             />
           </Group>
-          <Button variant="light" color="red" onClick={() => {/* Clear logic */}}>
+          <Button variant="light" color="red" onClick={clearPropertyDetails}>
             Clear All
           </Button>
         </Stack>
-      )
+      ),
     },
     {
-      id: 1,
+      value: '1',
       title: 'Property Valuation Details',
       content: (
         <Stack gap="md">
-          {/* Placeholder form fields for valuation */}
-          <TextInput label="Valuation Amount" placeholder="Enter amount" />
-          {/* <DatePicker label="Valuation Date" placeholder="Pick date" /> */}
-          <TextInput label="Valuator Name" placeholder="Enter name" />
-          {/* Add more fields as needed */}
+          <TextInput
+            label="Valuation Amount"
+            placeholder="Enter amount"
+            // {...form.getInputProps('valuationAmount')} // Uncomment and add to initialValues
+          />
+          <TextInput
+            label="Valuator Name"
+            placeholder="Enter name"
+            // {...form.getInputProps('valuatorName')} // Uncomment and add to initialValues
+          />
         </Stack>
-      )
+      ),
     },
     {
-      id: 2,
+      value: '2',
       title: 'Property Address Details',
       content: (
         <Stack gap="md">
-          {/* Placeholder form fields for address */}
-          <TextInput label="Street Address" placeholder="Enter street" />
-          <TextInput label="City" placeholder="Enter city" />
-          <TextInput label="State" placeholder="Enter state" />
-          <TextInput label="ZIP Code" placeholder="Enter ZIP" />
-          <TextInput label="Country" placeholder="Enter country" />
-          {/* Add more fields as needed */}
+          <TextInput
+            label="Street Address"
+            placeholder="Enter street"
+            // {...form.getInputProps('streetAddress')} // Uncomment and add to initialValues
+          />
+          <TextInput
+            label="City"
+            placeholder="Enter city"
+            // {...form.getInputProps('city')} // Uncomment and add to initialValues
+          />
+          <TextInput
+            label="State"
+            placeholder="Enter state"
+            // {...form.getInputProps('state')} // Uncomment and add to initialValues
+          />
+          <TextInput
+            label="ZIP Code"
+            placeholder="Enter ZIP"
+            // {...form.getInputProps('zipCode')} // Uncomment and add to initialValues
+          />
+          <TextInput
+            label="Country"
+            placeholder="Enter country"
+            // {...form.getInputProps('country')} // Uncomment and add to initialValues
+          />
         </Stack>
-      )
+      ),
     },
     {
-      id: 3,
+      value: '3',
       title: 'Other Details',
       content: (
         <Stack gap="md">
-          {/* Placeholder form fields for other details */}
-          <TextInput label="Additional Notes" placeholder="Enter notes" />
-          <TextInput label="Collateral Mapping" placeholder="Enter mapping" />
-          {/* Add more fields as needed */}
+          <TextInput
+            label="Additional Notes"
+            placeholder="Enter notes"
+            // {...form.getInputProps('additionalNotes')} // Uncomment and add to initialValues
+          />
+          <TextInput
+            label="Collateral Mapping"
+            placeholder="Enter mapping"
+            // {...form.getInputProps('collateralMapping')} // Uncomment and add to initialValues
+          />
         </Stack>
-      )
-    }
+      ),
+    },
   ];
 
   return (
     <Stack>
-      {sections.map((section) => (
-        <Box key={section.id}>
-          <Button
-            fullWidth
-            variant="default"
-            onClick={() => toggleSection(section.id)}
-            rightSection={active === section.id ? <IconMinus size={16} /> : <IconPlus size={16} />}
-            styles={{
-              root: {
-                backgroundColor: 'white',
-                color: 'black',
-                paddingLeft: 'var(--mantine-spacing-md)', // Minimal left padding to start text near left edge
-                border: '1px solid #e0e0e0',
-                borderRadius: '0',
-              },
-              section: {
-                marginLeft: 'auto', // Ensures rightSection (icon) is pushed to the far right
-              },
-            }}
-          >
-            {section.title}
-          </Button>
-          <Box
-            style={{
-              display: active === section.id ? 'block' : 'none',
-              padding: '0 var(--mantine-spacing-md)',
-            }}
-          >
-            {section.content}
-          </Box>
-        </Box>
-      ))}
+      <Accordion
+        multiple={false}
+        value={active}
+        onChange={setActive}
+        styles={{
+          control: {
+            backgroundColor: 'white',
+            color: 'black',
+            paddingLeft: 'var(--mantine-spacing-md)',
+            border: '1px solid #e0e0e0',
+            borderRadius: '0',
+            '&:hover': {
+              backgroundColor: 'white',
+            },
+          },
+          content: {
+            padding: '0 var(--mantine-spacing-md)',
+          },
+          chevron: {
+            marginLeft: 'auto',
+          },
+        }}
+        chevronPosition="right"
+        chevron={<IconChevronDown size={16} />}
+      >
+        {sections.map((section) => (
+          <Accordion.Item key={section.value} value={section.value}>
+            <Accordion.Control>{section.title}</Accordion.Control>
+            <Accordion.Panel>{section.content}</Accordion.Panel>
+          </Accordion.Item>
+        ))}
+      </Accordion>
 
-      {/* Bottom buttons */}
+      {/* Bottom buttons with save functionality */}
       <Group justify="flex-end" gap="md">
-        <Button variant="outline">Save as Draft</Button>
-        <Button variant="outline">Save and Close</Button>
-        <Button>Next</Button>
+        <Button
+          variant="outline"
+          onClick={() => handleSaveDraft(form.values)}
+        >
+          Save as Draft
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => handleSaveAndClose(form.values)}
+        >
+          Save and Close
+        </Button>
+        <Button onClick={handleNext}>Next</Button>
       </Group>
     </Stack>
   );
