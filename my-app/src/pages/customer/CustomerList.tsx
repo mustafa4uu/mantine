@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import ListingTable from '../../components/ListingTable/ListingTable';
 import { fetchPaginatedData } from '../../api/api';
 import { Link } from 'react-router-dom';
+import EditCollateralForm from '../../components/common/EditCollateralForm';
 
 export interface Customer {
   masterId: number;
@@ -117,6 +118,7 @@ const CustomerList: React.FC = () => {
           searchPlaceholder="Search customers..."
         />
       </div>
+      <EditCollateralForm />
     </Container>
   );
 };
