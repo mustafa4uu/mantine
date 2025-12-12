@@ -65,6 +65,7 @@ const CustomerForm: React.FC = () => {
         color: "green",
       });
 
+      // await queryClient.setQueriesData(['customerDetails'], submiytData);
       queryClient.invalidateQueries({ queryKey: ['customerDetails'] });
       queryClient.invalidateQueries({ queryKey: ['customerDetailsForm'] });
 

@@ -29,7 +29,7 @@ interface FormComponentProps {
 }
 
 const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraft, isFirstField }) => {
-  const { control, formState: { errors } } = useFormContext();
+  const { control, formState: { errors }, trigger } = useFormContext();
   const locationCodeValue = useWatch({ control, name: 'locationCode' });
   const validationRules: Record<string, any> = {};
   
@@ -74,6 +74,13 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
 
   const error = errors[field.fieldName]?.message as string | undefined;
 
+  // Define onBlur handler to trigger validation on blur (for regex/pattern, etc.)
+  const handleBlur = () => {
+    if (!isSaveAsDraft && (field.validationRegs || field.maxLength)) {
+      trigger(field.fieldName);
+    }
+  };
+
   return (
     <Controller
       name={field.fieldName}
@@ -85,6 +92,7 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
           label: field.displayName,
           value: value ?? '',
           onChange,
+          onBlur: handleBlur,
           error,
           mode,
           required: shouldValidateRequired, // Consistent with validation rule (star only where enforced)
