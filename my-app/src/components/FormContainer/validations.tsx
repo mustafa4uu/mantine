@@ -33,6 +33,26 @@ export const customValidations: Record<string, CustomValidation> = {
       return true;
     },
   },
+  rollNo1: {
+    required: false, // Adjust as needed
+    pattern: {
+      value: /^\d{1,5}$/,
+      message: "Roll No must be numeric and up to 5 digits",
+    },
+    maxLength: 5,
+  },
+  rollNo: {
+    required: false, // Adjust as needed
+    min: 0,
+    max: 99999,
+    validate: (value: number) => {
+      if (value !== undefined && value !== null && (value < 0 || value > 99999)) {
+        return "Roll No must be numeric and up to 5 digits";
+      }
+      return true;
+    },
+  },
+
   agreementDate: {
     required: true,
     validate: (value: string, formValues?: any) => {
