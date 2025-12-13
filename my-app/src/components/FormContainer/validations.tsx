@@ -61,6 +61,26 @@ export const customValidations: Record<string, CustomValidation> = {
     },
   },
 
+  registrationDate1: {
+    required: false, // Set to false since required is now conditional
+    validate: (value: string, formValues?: any) => {
+      const description = formValues?.description;
+      // Conditional required: if description is entered, registrationDate is required
+      if (description && description.trim() !== '' && (!value || value.trim() === '')) {
+        return 'Registration date is required when description is provided';
+      }
+      // Future date check if value is provided
+      if (value && value.trim() !== '') {
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Allow up to end of today
+        const regDate = new Date(value);
+        if (regDate > today) {
+          return 'Registration date cannot be in the future';
+        }
+      }
+      return true;
+    },
+  },
   agreementDate: {
     required: true,
     validate: (value: string, formValues?: any) => {
