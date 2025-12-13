@@ -95,6 +95,21 @@ export const customValidations: Record<string, CustomValidation> = {
       return true;
     },
   },
+  milkAmount: {
+    required: false, // Set to false since required is now conditional
+    validate: (value: number, formValues?: any) => {
+      const description = formValues?.description;
+      // Conditional required: if description is entered, milkAmount is required
+      if (description && description.trim() !== '' && (value === undefined || value === null || value === '')) {
+        return 'Milk Amount is required when description is provided';
+      }
+      // Non-negative number check if value is provided
+      if (value !== undefined && value !== null && (isNaN(value) || value < 0)) {
+        return 'Milk Amount must be a valid non-negative number';
+      }
+      return true;
+    },
+  },
   // Add other field-specific validations here, e.g., from metadata
   // For example, for pinCode:
   // pinCode: {
