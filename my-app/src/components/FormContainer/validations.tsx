@@ -52,6 +52,14 @@ export const customValidations: Record<string, CustomValidation> = {
       return true;
     },
   },
+  description: {
+    required: false, // Adjust as needed
+    maxLength: 250,
+    pattern: {
+      value: /^[a-zA-Z0-9\s.,;:'"?!@#\/_-&%*+,=()<>]{0,250}$/,
+      message: "Description allows alphanumeric characters, spaces, and common punctuation (.,;:'\"?!@#/_-&%*+,=()<>).",
+    },
+  },
 
   agreementDate: {
     required: true,
