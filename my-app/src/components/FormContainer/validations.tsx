@@ -110,6 +110,16 @@ export const customValidations: Record<string, CustomValidation> = {
       return true;
     },
   },
+
+  // const calculateYearsDiff = (startDate: string | null, endDate: string | null): string => {
+  //   if (!startDate || !endDate) return '';
+  //   const start = new Date(startDate);
+  //   const end = new Date(endDate);
+  //   if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) return 'Invalid dates';
+  //   const diffInMs = end.getTime() - start.getTime();
+  //   const years = Math.floor(diffInMs / (1000 * 60 * 60 * 24 * 365.25));
+  //   return years.toString();
+  // };
   // Add other field-specific validations here, e.g., from metadata
   // For example, for pinCode:
   // pinCode: {
