@@ -97,26 +97,28 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
   const error = errors[field.fieldName]?.message as string | undefined;
 
   // Define onBlur handler to trigger validation on blur (for regex/pattern, etc.)
-  const handleBlur = () => {
-    if (!isSaveAsDraft && (field.validationRegs || field.maxLength || custom?.pattern || custom?.validate || custom?.maxLength)) {
-      trigger(field.fieldName);
-    }
-  };
+  // const handleBlur = () => {
+  //   if (!isSaveAsDraft && (field.validationRegs || field.maxLength || custom?.pattern || custom?.validate || custom?.maxLength)) {
+  //     trigger(field.fieldName);
+  //   }
+  // };
 
   return (
     <Controller
       name={field.fieldName}
       control={control}
       rules={validationRules}
-      render={({ field: { onChange, value, onBlur: fieldOnBlur } }) => {
+      render={({ field: { onChange, value, 
+        //onBlur: fieldOnBlur
+       } }) => {
         const commonProps = {
           name: field.fieldName,
           label: field.displayName,
           value: value ?? '',
           onChange,
           onBlur: (e: any) => {
-            fieldOnBlur?.(e);
-            handleBlur();
+           // fieldOnBlur?.(e);
+           // handleBlur();
           },
           error,
           mode,

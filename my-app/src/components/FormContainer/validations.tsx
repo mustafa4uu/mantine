@@ -111,6 +111,25 @@ export const customValidations: Record<string, CustomValidation> = {
     },
   },
 
+  // serialNumber: {
+  //   required: true,
+  //   validate: async (value: string) => {
+  //     if (!value || value.trim() === '') {
+  //       return `${'Serial Number'} is required`;
+  //     }
+  //     try {
+  //       const response = await fetch(`/api/check-serial?serial=${encodeURIComponent(value.trim())}`);
+  //       const data = await response.json();
+  //       if (data.exists) {
+  //         return 'Serial number already exists';
+  //       }
+  //       return true;
+  //     } catch (error) {
+  //       console.error('Error checking serial number:', error);
+  //       return 'Error checking serial number. Please try again.';
+  //     }
+  //   },
+  // },
   // const calculateYearsDiff = (startDate: string | null, endDate: string | null): string => {
   //   if (!startDate || !endDate) return '';
   //   const start = new Date(startDate);
