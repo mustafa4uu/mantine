@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { useFormContext, Controller, useWatch } from 'react-hook-form';
 import TextField from '../field-types/TextField';
 import DateField from '../field-types/DateField';
@@ -30,20 +30,9 @@ interface FormComponentProps {
 }
 
 const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraft, isFirstField }) => {
-  const { control, formState: { errors }, trigger, getValues, setValue } = useFormContext();
+  const { control, formState: { errors }, trigger, getValues } = useFormContext();
   const locationCodeValue = useWatch({ control, name: 'locationCode' });
   const validationRules: Record<string, any> = {};
-  
-  // Track previous branchId for country reset logic
-  const previousBranchIdRef = useRef(locationCodeValue);
-  
-  // Reset country value when branchId changes to ensure invalid previous selections are cleared
-  useEffect(() => {
-    if (field.fieldName === 'country' && locationCodeValue !== previousBranchIdRef.current) {
-      setValue('country', '', { shouldValidate: false, shouldDirty: false });
-      previousBranchIdRef.current = locationCodeValue;
-    }
-  }, [locationCodeValue, field.fieldName, setValue]);
   
   // If field is not visible, skip all validation
   if (field.isVisible === false) {

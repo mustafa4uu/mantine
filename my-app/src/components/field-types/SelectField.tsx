@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import { Select, Loader } from '@mantine/core';
+import { useFormContext } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import { fetchBranches, fetchCountries, fetchAddressTypes } from '../../utils/common'; // Adjust path as needed
 
@@ -29,6 +30,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
   branchId, // Destructure the new prop
   ...rest
 }) => {
+  const { setValue } = useFormContext();
   const disabled = mode === "view";
   
   // Fetch countries using separate utility, now dependent on branchId
@@ -76,6 +78,17 @@ const SelectField: React.FC<SelectFieldProps> = ({
 
     return uniqueOptions;
   }, [name, label, options, countryOptions, loadingCountries]);
+
+  // Clear invalid country value when options change (e.g., branchId changes)
+  useEffect(() => {
+    if (name === "country" && !loadingCountries && countryOptions.length > 0) {
+      const currentValue = value;
+      const isValid = countryOptions.some(opt => opt.value === String(currentValue));
+      if (!isValid && currentValue !== '' && currentValue !== null && currentValue !== undefined) {
+        setValue(name, '', { shouldValidate: false, shouldDirty: false });
+      }
+    }
+  }, [countryOptions, name, value, loadingCountries, setValue]);
 
   const isLoading = false;
 
