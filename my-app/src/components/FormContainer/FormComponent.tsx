@@ -71,11 +71,11 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
   }
 
   if (!isSaveAsDraft && field.maxLength) {
-    validationRules.maxLength = {
-      value: field.maxLength,
-      message: `${field.displayName} must be at most ${field.maxLength} characters`,
-    };
-  }
+      validationRules.maxLength = {
+        value: field.maxLength,
+        message: `${field.displayName} must be at most ${field.maxLength} characters`,
+      };
+    }
 
   // Merge with custom validations
   const custom = customValidations[field.fieldName];
@@ -84,10 +84,18 @@ const FormComponent: React.FC<FormComponentProps> = ({ field, mode, isSaveAsDraf
       validationRules.pattern = custom.pattern;
     }
     if (custom.maxLength !== undefined) {
-      validationRules.maxLength = {
-        value: custom.maxLength,
-        message: `${field.displayName} must be at most ${custom.maxLength} characters`,
-      };
+      // For NUMBER fields, map custom.maxLength to max
+      if (field.fieldType === 'NUMBER') {
+        validationRules.max = {
+          value: custom.maxLength,
+          message: `${field.displayName} must be at most ${custom.maxLength}`,
+        };
+      } else {
+        validationRules.maxLength = {
+          value: custom.maxLength,
+          message: `${field.displayName} must be at most ${custom.maxLength} characters`,
+        };
+      }
     }
     if (custom.validate) {
       validationRules.validate = custom.validate;
