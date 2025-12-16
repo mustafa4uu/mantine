@@ -49,37 +49,107 @@ const CustomerForm: React.FC = () => {
 
   // Mutation for creating/updating customer address
   const mutation = useMutation({
-    mutationFn: (submitData: FormSubmitData) =>
-      mode === 'edit' && id
-        ? updateFormRecord('/api/v1/customers/update-customer', { ...submitData, masterId: Number(id) })
-        : createNewRecord('/api/v1/customers/create-customer', submitData),
+  mutationFn: async (submitData: FormSubmitData) => {
+    try {
+      if (mode === 'edit' && id) {
+        return await updateFormRecord('/api/v1/customers/update-customer', { ...submitData, masterId: Number(id) });
+      } else {
+        return await createNewRecord('/api/v1/customers/create-customer', submitData);
+      }
+    } catch (error) {
+      // Re-throw to let onError handle it
+      throw error;
+    }
+  },
 
-    onSuccess: () => {
-      const message =
-        mode === 'edit'
-          ? 'Customer Details updated successfully!'
-          : 'Customer Details created successfully!';
+  onSuccess: (data) => {
+    const message =
+      mode === 'edit'
+        ? 'Customer Details updated successfully!'
+        : 'Customer Details created successfully!';
 
-      notifications.show({
-        message: message,
-        color: "green",
-      });
+    notifications.show({
+      message: message,
+      color: "green",
+    });
 
-      // await queryClient.setQueriesData(['customerDetails'], submiytData);
-      queryClient.invalidateQueries({ queryKey: ['customerDetails'] });
-      queryClient.invalidateQueries({ queryKey: ['customerDetailsForm'] });
+    queryClient.invalidateQueries({ queryKey: ['customerDetails'] });
+    queryClient.invalidateQueries({ queryKey: ['customerDetailsForm'] });
 
-      navigate('/customer-details');
-    },
+    // Redirect only on success
+    navigate('/customer-details');
+  },
 
-    onError: (error: Error) => {
-      console.error('Form submission error:', error);
-      notifications.show({
-        message: error.message || 'An error occurred while submitting the form',
-        color: "red",
-      });
-    },
-  });
+  onError: (error: any) => {
+    console.error('Full error object:', error); // Log full error for debugging
+    
+    // Enhanced error handling for the specific API response structure
+    let errorMessage = 'An error occurred while submitting the form';
+    const responseData = error.response?.data;
+
+    if (responseData && responseData.success === false) {
+      // Handle the specific error structure: { success: false, error: "...", errorList: [...] }
+      errorMessage = responseData.error || errorMessage;
+      
+      // If errorList exists, prioritize field-specific messages
+      if (responseData.errorList && Array.isArray(responseData.errorList) && responseData.errorList.length > 0) {
+        const fieldErrors = responseData.errorList.map((err: any) => 
+          `${err.field}: ${err.massage || err.message || 'Validation error'}`
+        ).join('\n'); // Use 'massage' as per API, or fallback to 'message'
+        errorMessage = fieldErrors.length > 0 ? fieldErrors : errorMessage;
+        
+        // Optionally, set field-specific errors in form (requires access to setError from useForm)
+        // Example: responseData.errorList.forEach((err: any) => setError(err.field as Path<TFieldValues>, { message: err.massage }));
+      }
+    } else if (error.response?.status) {
+      errorMessage = `Server error (${error.response.status}): ${error.response.statusText}`;
+    } else if (error.message) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else if (Object.keys(error || {}).length === 0) {
+      errorMessage = 'Empty response from server. Please check network or try again.';
+    }
+
+    // Show error notification but DO NOT redirect on error
+    notifications.show({
+      message: errorMessage,
+      color: "red",
+    });
+  },
+});
+  // const mutation = useMutation({
+  //   mutationFn: (submitData: FormSubmitData) =>
+  //     mode === 'edit' && id
+  //       ? updateFormRecord('/api/v1/customers/update-customer', { ...submitData, masterId: Number(id) })
+  //       : createNewRecord('/api/v1/customers/create-customer', submitData),
+
+  //   onSuccess: () => {
+  //     const message =
+  //       mode === 'edit'
+  //         ? 'Customer Details updated successfully!'
+  //         : 'Customer Details created successfully!';
+
+  //     notifications.show({
+  //       message: message,
+  //       color: "green",
+  //     });
+
+  //     // await queryClient.setQueriesData(['customerDetails'], submiytData);
+  //     queryClient.invalidateQueries({ queryKey: ['customerDetails'] });
+  //     queryClient.invalidateQueries({ queryKey: ['customerDetailsForm'] });
+
+  //     navigate('/customer-details');
+  //   },
+
+  //   onError: (error: Error) => {
+  //     console.error('Form submission error:', error);
+  //     notifications.show({
+  //       message: error.message || 'An error occurred while submitting the form',
+  //       color: "red",
+  //     });
+  //   },
+  // });
 
   // Handle form submission from FormContainer
   const handleFormSubmit = (formData: FormSubmitData) => {
