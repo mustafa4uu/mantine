@@ -1,0 +1,55 @@
+/* CollateralFacilityMapping.css - Custom styles to enhance Mantine UI matching the photo layout */
+/* Import this in your component: import './CollateralFacilityMapping.css'; */
+
+.container-fluid {
+  padding: 0 1rem;
+}
+
+.mantine-Paper-root {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 12px;
+}
+
+.mantine-Table-root {
+  background-color: white;
+  border: 1px solid #e1e5e9;
+}
+
+.mantine-Table-th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.mantine-Table-tr:hover {
+  background-color: #e9ecef;
+}
+
+.mantine-Badge-root {
+  font-size: 0.75rem;
+}
+
+.mantine-ScrollArea-root {
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+}
+
+.mantine-Title-root {
+  color: #212529;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+
+.mantine-TextInput-root[readonly] {
+  background-color: #f8f9fa;
+  color: #6c757d;
+}
+
+.mantine-ActionIcon-root {
+  transition: all 0.2s ease;
+}
+
+.mantine-ActionIcon-root:hover {
+  transform: scale(1.05);
+}

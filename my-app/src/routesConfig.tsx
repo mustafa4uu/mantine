@@ -5,6 +5,7 @@ import AddressList from "./pages/address/AddressList";
 import AddressForm from "./pages/address/AddressForm";
 
 import AddCollateral from "./pages/collateral/AddCollateral";
+import CollateralFacilityMapping from "./pages/CollateralFacilityMapping/CollateralFacilityMapping";
 
 export const routesConfig = [
     { path: "/customer-details", element: <CustomerList /> },
@@ -14,4 +15,5 @@ export const routesConfig = [
     { path: "/customer-address/add", element: <AddressForm /> },  
     { path: "/customer-address/edit/:id", element: <AddressForm /> },
     { path: "/onboarding", element: <AddCollateral /> },
+    { path: "/collateral-perfections", element: <CollateralFacilityMapping /> },
 ];
