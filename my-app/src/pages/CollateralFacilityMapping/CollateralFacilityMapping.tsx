@@ -43,6 +43,9 @@ const CollateralMapping = () => {
     [totalProposedAED]
   );
 
+  // Parse AED value with commas
+  const parseAED = (aedString) => parseFloat(aedString.replace(/,/g, ''));
+
   // Build default values
   const defaultValuesObj = useMemo(() => {
     const obj = {};
@@ -50,7 +53,7 @@ const CollateralMapping = () => {
       obj[`model-${cIdx}`] = ['prop', 'perc', 'prop', 'prop', 'abs'][cIdx];
       facilities.forEach((fac, fIdx) => {
         const perc = parseFloat(propPercs[fIdx]);
-        const colAED = parseFloat(col.aed);
+        const colAED = parseAED(col.aed);
         const absVal = (perc / 100 * colAED).toFixed(2);
         obj[`perc-${cIdx}-${fIdx}`] = perc;
         obj[`abs-${cIdx}-${fIdx}`] = parseFloat(absVal);
@@ -59,9 +62,12 @@ const CollateralMapping = () => {
     return obj;
   }, [propPercs]);
 
-  const { control, handleSubmit, watch, getValues, reset } = useForm({
+  const { control, handleSubmit, watch, setValue, reset } = useForm({
     defaultValues: defaultValuesObj,
   });
+
+  // Watch all form values for real-time updates
+  const watchedValues = watch();
 
   const onSubmit = (data) => {
     console.log('Form submitted:', data);
@@ -112,62 +118,130 @@ const CollateralMapping = () => {
     return 'white';
   };
 
-  // Compute LTV for a facility row
-  const computeLTV = (fIdx) => {
-    let totalValue = 0;
-    const facilityAED = parseFloat(facilities[fIdx].proposedAED || '0');
-    if (facilityAED === 0) return 0;
-    defaultCollaterals.forEach((col, cIdx) => {
-      const model = watch(`model-${cIdx}`);
-      let val = 0;
-      const colAED = parseFloat(col.aed);
-      if (model === 'prop') {
+  // Handle radio button change
+  const handleModelChange = (cIdx, newModel) => {
+    // Update the model value
+    setValue(`model-${cIdx}`, newModel);
+    
+    const colAED = parseAED(defaultCollaterals[cIdx].aed);
+    
+    facilities.forEach((_, fIdx) => {
+      if (newModel === 'prop') {
+        // For proportionate model, use the calculated percentages
         const perc = parseFloat(propPercs[fIdx]);
-        val = (perc / 100) * colAED;
-      } else if (model === 'perc') {
-        const perc = getValues(`perc-${cIdx}-${fIdx}`) || 0;
-        val = (perc / 100) * colAED;
-      } else {
-        val = getValues(`abs-${cIdx}-${fIdx}`) || 0;
+        const value = (perc / 100) * colAED;
+        setValue(`perc-${cIdx}-${fIdx}`, perc, { shouldValidate: false });
+        setValue(`abs-${cIdx}-${fIdx}`, value, { shouldValidate: false });
+      } else if (newModel === 'perc') {
+        // When switching to percentage model, calculate value from existing percentage
+        const perc = watchedValues[`perc-${cIdx}-${fIdx}`] || 0;
+        const value = (perc / 100) * colAED;
+        setValue(`abs-${cIdx}-${fIdx}`, value, { shouldValidate: false });
+      } else if (newModel === 'abs') {
+        // When switching to absolute model, calculate percentage from existing value
+        const value = watchedValues[`abs-${cIdx}-${fIdx}`] || 0;
+        const perc = colAED > 0 ? (value / colAED) * 100 : 0;
+        setValue(`perc-${cIdx}-${fIdx}`, perc, { shouldValidate: false });
       }
-      totalValue += val;
     });
-    return ((totalValue / facilityAED) * 100).toFixed(2);
   };
 
-  // Compute total for a collateral column
-  const computeTotalForCol = (cIdx) => {
-    const model = watch(`model-${cIdx}`);
-    const colAED = parseFloat(defaultCollaterals[cIdx].aed);
-    let totalPerc = 0;
-    let totalValue = 0;
-    if (model === 'prop') {
-      totalPerc = 100.00;
-      totalValue = colAED;
-    } else if (model === 'perc') {
-      facilities.forEach((_, fIdx) => {
-        const perc = getValues(`perc-${cIdx}-${fIdx}`) || 0;
-        totalPerc += perc;
-        totalValue += (perc / 100) * colAED;
+  // Compute LTV for a facility row - memoized for performance
+  const computeLTV = useMemo(() => {
+    return facilities.map((f, fIdx) => {
+      let totalValue = 0;
+      const facilityAED = parseFloat(f.proposedAED || '0');
+      if (facilityAED === 0) return '0.00';
+      
+      defaultCollaterals.forEach((col, cIdx) => {
+        const model = watchedValues[`model-${cIdx}`];
+        let val = 0;
+        const colAED = parseAED(col.aed);
+        
+        if (model === 'prop') {
+          const perc = parseFloat(propPercs[fIdx]);
+          val = (perc / 100) * colAED;
+        } else if (model === 'perc') {
+          const perc = watchedValues[`perc-${cIdx}-${fIdx}`] || 0;
+          val = (perc / 100) * colAED;
+        } else {
+          val = watchedValues[`abs-${cIdx}-${fIdx}`] || 0;
+        }
+        totalValue += val;
       });
-    } else {
-      facilities.forEach((_, fIdx) => {
-        const absVal = getValues(`abs-${cIdx}-${fIdx}`) || 0;
-        totalValue += absVal;
-      });
-      totalPerc = (totalValue / colAED) * 100;
-    }
-    return { totalPerc: totalPerc.toFixed(2), totalValue: totalValue.toFixed(2) };
-  };
+      return ((totalValue / facilityAED) * 100).toFixed(2);
+    });
+  }, [watchedValues, propPercs]);
 
-  // Compute overall LTV for total row
-  const computeOverallLTV = () => {
+  // Compute total for a collateral column - memoized for performance
+  const computeTotalForCol = useMemo(() => {
+    return defaultCollaterals.map((col, cIdx) => {
+      const model = watchedValues[`model-${cIdx}`];
+      const colAED = parseAED(col.aed);
+      let totalPerc = 0;
+      let totalValue = 0;
+      
+      if (model === 'prop') {
+        totalPerc = 100.00;
+        totalValue = colAED;
+      } else if (model === 'perc') {
+        facilities.forEach((_, fIdx) => {
+          const perc = watchedValues[`perc-${cIdx}-${fIdx}`] || 0;
+          totalPerc += perc;
+          totalValue += (perc / 100) * colAED;
+        });
+      } else {
+        facilities.forEach((_, fIdx) => {
+          const absVal = watchedValues[`abs-${cIdx}-${fIdx}`] || 0;
+          totalValue += absVal;
+        });
+        totalPerc = colAED > 0 ? (totalValue / colAED) * 100 : 0;
+      }
+      return { 
+        totalPerc: totalPerc.toFixed(2), 
+        totalValue: totalValue.toFixed(2) 
+      };
+    });
+  }, [watchedValues]);
+
+  // Compute overall LTV for total row - memoized for performance
+  const computeOverallLTV = useMemo(() => {
     let totalAllocated = 0;
-    defaultCollaterals.forEach((col, cIdx) => {
-      const { totalValue } = computeTotalForCol(cIdx);
-      totalAllocated += parseFloat(totalValue);
+    computeTotalForCol.forEach((colTotal) => {
+      totalAllocated += parseFloat(colTotal.totalValue);
     });
     return ((totalAllocated / totalProposedAED) * 100).toFixed(2);
+  }, [computeTotalForCol, totalProposedAED]);
+
+  // Handle percentage change for a specific collateral and facility
+  const handlePercentageChange = (cIdx, fIdx, value) => {
+    const colAED = parseAED(defaultCollaterals[cIdx].aed);
+    const calculatedValue = (value / 100) * colAED;
+    
+    // Update the value field
+    setValue(`abs-${cIdx}-${fIdx}`, calculatedValue, { 
+      shouldValidate: false, 
+      shouldDirty: false 
+    });
+  };
+
+  // Handle value change for a specific collateral and facility
+  const handleValueChange = (cIdx, fIdx, value) => {
+    const colAED = parseAED(defaultCollaterals[cIdx].aed);
+    const calculatedPercentage = colAED > 0 ? (value / colAED) * 100 : 0;
+    
+    // Update the percentage field
+    setValue(`perc-${cIdx}-${fIdx}`, calculatedPercentage, { 
+      shouldValidate: false, 
+      shouldDirty: false 
+    });
+  };
+
+  // Format number to 2 decimal places
+  const formatTwoDecimals = (num) => {
+    if (num === null || num === undefined) return '0.00';
+    const number = typeof num === 'number' ? num : parseFloat(num);
+    return isNaN(number) ? '0.00' : number.toFixed(2);
   };
 
   return (
@@ -226,7 +300,11 @@ const CollateralMapping = () => {
                       name={`model-${idx}`}
                       control={control}
                       render={({ field }) => (
-                        <Radio.Group {...field} size="xs">
+                        <Radio.Group
+                          value={field.value}
+                          onChange={(value) => handleModelChange(idx, value)}
+                          size="xs"
+                        >
                           <Stack gap={4}>
                             <Radio value="prop" label="Proportionate" styles={{ label: { fontSize: 10 } }} />
                             <Radio value="perc" label="Percentage" styles={{ label: { fontSize: 10 } }} />
@@ -289,65 +367,96 @@ const CollateralMapping = () => {
                     </Group>
                   </Table.Td>
                   {defaultCollaterals.map((col, cIdx) => {
-                    const model = watch(`model-${cIdx}`);
-                    const colAED = parseFloat(col.aed);
-                    let percDisplay, valueDisplay;
+                    const model = watchedValues[`model-${cIdx}`];
+                    const colAED = parseAED(col.aed);
+                    
                     if (model === 'prop') {
+                      // Proportionate model - both fields are read-only
                       const perc = propPercs[fIdx];
                       const value = ((parseFloat(perc) / 100) * colAED).toFixed(2);
-                      percDisplay = <Text size="xs">{perc} %</Text>;
-                      valueDisplay = <Text size="xs">{value}</Text>;
+                      return (
+                        <React.Fragment key={`${fIdx}-${cIdx}`}>
+                          <Table.Td><Text size="xs">{perc}%</Text></Table.Td>
+                          <Table.Td><Text size="xs">{value}</Text></Table.Td>
+                        </React.Fragment>
+                      );
                     } else if (model === 'perc') {
-                      percDisplay = (
-                        <Controller
-                          name={`perc-${cIdx}-${fIdx}`}
-                          control={control}
-                          rules={{ min: 0, max: 100, valueAsNumber: true }}
-                          render={({ field }) => (
-                            <NumberInput
-                              {...field}
-                              size="xs"
-                              min={0}
-                              max={100}
-                              suffix="%"
-                              precision={2}
+                      // Percentage model - show percentage input, value is calculated
+                      const currentPerc = watchedValues[`perc-${cIdx}-${fIdx}`] || 0;
+                      const calculatedValue = ((currentPerc / 100) * colAED);
+                      
+                      return (
+                        <React.Fragment key={`${fIdx}-${cIdx}`}>
+                          <Table.Td>
+                            <Controller
+                              name={`perc-${cIdx}-${fIdx}`}
+                              control={control}
+                              rules={{ min: 0, max: 100, valueAsNumber: true }}
+                              render={({ field }) => (
+                                <NumberInput
+                                  {...field}
+                                  size="xs"
+                                  min={0}
+                                  max={100}
+                                  suffix="%"
+                                  precision={2}
+                                  onChange={(value) => {
+                                    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+                                    field.onChange(numValue);
+                                    if (numValue !== null && !isNaN(numValue)) {
+                                      handlePercentageChange(cIdx, fIdx, numValue);
+                                    }
+                                  }}
+                                  value={field.value || ''}
+                                />
+                              )}
                             />
-                          )}
-                        />
+                          </Table.Td>
+                          <Table.Td>
+                            <Text size="xs">{formatTwoDecimals(calculatedValue)}</Text>
+                          </Table.Td>
+                        </React.Fragment>
                       );
-                      const perc = getValues(`perc-${cIdx}-${fIdx}`) || 0;
-                      const value = ((perc / 100) * colAED).toFixed(2);
-                      valueDisplay = <Text size="xs">{value}</Text>;
-                    } else { // abs
-                      valueDisplay = (
-                        <Controller
-                          name={`abs-${cIdx}-${fIdx}`}
-                          control={control}
-                          rules={{ min: 0, max: colAED, valueAsNumber: true }}
-                          render={({ field }) => (
-                            <NumberInput
-                              {...field}
-                              size="xs"
-                              min={0}
-                              max={colAED}
-                              precision={2}
+                    } else {
+                      // Absolute model - show value input, percentage is calculated
+                      const currentValue = watchedValues[`abs-${cIdx}-${fIdx}`] || 0;
+                      const calculatedPerc = colAED > 0 ? ((currentValue / colAED) * 100) : 0;
+                      
+                      return (
+                        <React.Fragment key={`${fIdx}-${cIdx}`}>
+                          <Table.Td>
+                            <Text size="xs">{formatTwoDecimals(calculatedPerc)}%</Text>
+                          </Table.Td>
+                          <Table.Td>
+                            <Controller
+                              name={`abs-${cIdx}-${fIdx}`}
+                              control={control}
+                              rules={{ min: 0, max: colAED, valueAsNumber: true }}
+                              render={({ field }) => (
+                                <NumberInput
+                                  {...field}
+                                  size="xs"
+                                  min={0}
+                                  max={colAED}
+                                  precision={2}
+                                  onChange={(value) => {
+                                    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+                                    field.onChange(numValue);
+                                    if (numValue !== null && !isNaN(numValue)) {
+                                      handleValueChange(cIdx, fIdx, numValue);
+                                    }
+                                  }}
+                                  value={field.value || ''}
+                                />
+                              )}
                             />
-                          )}
-                        />
+                          </Table.Td>
+                        </React.Fragment>
                       );
-                      const absVal = getValues(`abs-${cIdx}-${fIdx}`) || 0;
-                      const perc = ((absVal / colAED) * 100).toFixed(2);
-                      percDisplay = <Text size="xs">{perc} %</Text>;
                     }
-                    return (
-                      <React.Fragment key={`${fIdx}-${cIdx}`}>
-                        <Table.Td>{percDisplay}</Table.Td>
-                        <Table.Td>{valueDisplay}</Table.Td>
-                      </React.Fragment>
-                    );
                   })}
                   <Table.Td style={stickyRight} align="center">
-                    <Text size="xs" fw={500}>{computeLTV(fIdx)}%</Text>
+                    <Text size="xs" fw={500}>{computeLTV[fIdx]}%</Text>
                   </Table.Td>
                 </Table.Tr>
               ))}
@@ -359,7 +468,7 @@ const CollateralMapping = () => {
                 </Table.Td>
                 <Table.Td style={{ ...secondColSticky, background: '#e7f5ff' }} />
                 {defaultCollaterals.map((_, cIdx) => {
-                  const { totalPerc, totalValue } = computeTotalForCol(cIdx);
+                  const { totalPerc, totalValue } = computeTotalForCol[cIdx];
                   return (
                     <React.Fragment key={`tot-${cIdx}`}>
                       <Table.Td><Text size="xs" fw={700}>{totalPerc}%</Text></Table.Td>
@@ -368,7 +477,7 @@ const CollateralMapping = () => {
                   );
                 })}
                 <Table.Td style={{ ...stickyRight, background: '#e7f5ff' }} align="center">
-                  <Text size="xs" fw={700}>{computeOverallLTV()}%</Text>
+                  <Text size="xs" fw={700}>{computeOverallLTV}%</Text>
                 </Table.Td>
               </Table.Tr>
             </Table.Tbody>
