@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Container,
   Title,
@@ -36,6 +36,7 @@ const CollateralMapping = () => {
       usd: c.amount.currency === 'USD' ? c.amount.value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : undefined,
       aed: c.amount.baseValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       description: c.description,
+      allocateModel: c.allocateModel || 'DEFAULT', // Assuming allocateModel field in APIDATA
     })), 
     []
   );
@@ -71,6 +72,30 @@ const CollateralMapping = () => {
 
   // Watch all form values for real-time updates
   const watchedValues = watch();
+
+  // Set initial radio button selection based on API allocateModel
+  useEffect(() => {
+    collaterals.forEach((col, cIdx) => {
+      const apiModel = col.allocateModel;
+      let frontendModel: string | null = null;
+
+      if (apiModel === 'PROPORTIONATE') {
+        frontendModel = 'prop';
+      } else if (apiModel === 'PERCENTAGE') {
+        frontendModel = 'perc';
+      } else if (apiModel === 'ABSOLUTE') {
+        frontendModel = 'abs';
+      } else {
+        // DEFAULT or other: no selection
+        setValue(`model-${cIdx}`, undefined);
+        return;
+      }
+
+      // Set the model and trigger initial values
+      setValue(`model-${cIdx}`, frontendModel);
+      handleModelChange(cIdx, frontendModel);
+    });
+  }, []); // Run once on mount
 
   const onSubmit = (formData: any) => {
     setSubmitError('');
