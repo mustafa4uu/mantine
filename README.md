@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Title,
   Paper,
@@ -59,6 +59,7 @@ const secondColSticky = {
   borderRight: '1px solid #dee2e6',
 };
 const secondStickyColr = { background: '#E7ECF3' };
+
 const EmptyLeftTh: React.FC<{ width: number }> = ({ width }) => (
   <Table.Th
     w={width}
@@ -152,6 +153,10 @@ const TableHeader: React.FC<{
                 width: expandedCollaterals[idx]
                   ? COLLATERAL_COL_WIDTH * 3
                   : COLLATERAL_COL_WIDTH_COLLAPSED,
+                background: 'white',
+                position: 'sticky',
+                top: 0,
+                zIndex: 4
               }}
             >
               <Group justify="space-between" wrap="nowrap" pt="sm" pl="sm">
@@ -202,7 +207,12 @@ const TableHeader: React.FC<{
               key={col.bid}
               colSpan={expandedCollaterals[idx] ? 3 : 1}
               className="header-cell top-left-aligned"
-              style={!expandedCollaterals[idx] ? { background: '#fff', border: '0', borderLeft: '0', borderRight: '0', borderTop: '0', borderBottom: '0' } : {}}
+              style={{
+                ...(!expandedCollaterals[idx] ? { background: '#fff', border: '0', borderLeft: '0', borderRight: '0', borderTop: '0', borderBottom: '0' } : { background: 'white' }),
+                position: 'sticky',
+                top: 41,
+                zIndex: 4
+              }}
               pt="sm" pl="sm"
             >
               {expandedCollaterals[idx] ? (
@@ -217,7 +227,14 @@ const TableHeader: React.FC<{
         {/* Header Row 3 - Allocation Model (only shown when expanded) */}
         <Table.Tr>
           <EmptyLeftTh width={FIRST_COL_WIDTH} />
-          <Table.Th className="header-cell"pt="sm" pl="sm" style={{ position: 'sticky', left: FIRST_COL_WIDTH, zIndex: 2, background: 'white', borderBottom: '0px !important' }}>
+          <Table.Th className="header-cell" pt="sm" pl="sm" style={{ 
+            position: 'sticky', 
+            left: FIRST_COL_WIDTH, 
+            zIndex: 4, 
+            background: 'white', 
+            borderBottom: '0px !important',
+            top: 82
+          }}>
             <Text size="sm" fw={600}>{t('customTable.allocationModel')}</Text>
           </Table.Th>
           {defaultCollaterals.map((col: any, idx: number) => (
@@ -227,7 +244,10 @@ const TableHeader: React.FC<{
               className="cell-all-border"
               style={{
                 background: 'white',
-                width: expandedCollaterals[idx] ? COLLATERAL_COL_WIDTH * 3 : COLLATERAL_COL_WIDTH_COLLAPSED
+                width: expandedCollaterals[idx] ? COLLATERAL_COL_WIDTH * 3 : COLLATERAL_COL_WIDTH_COLLAPSED,
+                position: 'sticky',
+                top: 82,
+                zIndex: 4
               }}
             >
               {expandedCollaterals[idx] ? (
@@ -261,7 +281,13 @@ const TableHeader: React.FC<{
 
         {/* Header Row 4 - Coverage Headers (only shown when expanded) */}
         <Table.Tr>
-          <Table.Th ta="left" style={{ ...stickyLeft, ...secondStickyColr }}>
+          <Table.Th ta="left" style={{ 
+            ...stickyLeft, 
+            ...secondStickyColr,
+            position: 'sticky',
+            top: 123,
+            zIndex: 4
+          }}>
             <Group gap={4}>
               <ActionIcon size="xs" variant="transparent" onClick={handleExpandAll} >
                 {expandAll ? (<IconChevronsUp size={14} />) : (<IconChevronsDown size={14} />)}
@@ -269,7 +295,14 @@ const TableHeader: React.FC<{
               <Text size="sm" fw={500}>{t('customTable.facilityDetails')}</Text>
             </Group>
           </Table.Th>
-          <Table.Th className="cell-all-border cell-padding-remove" ta="left" style={{ ...secondColSticky, ...secondStickyColr }}>
+          <Table.Th className="cell-all-border cell-padding-remove" ta="left" style={{ 
+            ...secondColSticky, 
+            ...secondStickyColr,
+            position: 'sticky',
+            left: FIRST_COL_WIDTH,
+            top: 123,
+            zIndex: 4
+          }}>
             <Text size="sm" fw={500} m={0} style={{ lineHeight: 'calc(1em + 2px)' }}>
               {t('customTable.facilityAmount')}<br />
               {t('customTable.rPA')}
@@ -280,11 +313,14 @@ const TableHeader: React.FC<{
               key={col.bid}
               colSpan={expandedCollaterals[idx] ? 3 : 1}
               className="cell-all-border cell-padding-remove"
-              style={
-                !expandedCollaterals[idx]
+              style={{
+                ...(!expandedCollaterals[idx]
                   ? { background: '#fff', border: 0 }
-                  : { backgroundColor: '#f8f9fa' }
-              }
+                  : { backgroundColor: '#f8f9fa' }),
+                position: 'sticky',
+                top: 123,
+                zIndex: 4
+              }}
               ta="center"
             >
               {expandedCollaterals[idx] ? (
@@ -422,6 +458,7 @@ const FacilityRow: React.FC<{
               borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6',
               borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6',
               paddingLeft: `${level * 24 + 12}px`,
+              background: '#f8f9fa',
             }}
           >
             <Group gap="xs" wrap="nowrap">
@@ -447,6 +484,7 @@ const FacilityRow: React.FC<{
               borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6',
               borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6',
               textAlign: 'right',
+              background: '#f8f9fa',
             }}
           >
             <Stack gap={4} align="flex-end">
@@ -707,17 +745,44 @@ const FacilityRow: React.FC<{
 
             return (
               <React.Fragment key={`${facilityIndex}-${cIdx}`}>
-                <Table.Td className="cell-height" ta="center" style={{ borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', width: '160px', minWidth: '160px', maxWidth: '160px', boxSizing: 'border-box', padding: '8px', }}>
+                <Table.Td className="cell-height" ta="center" style={{ 
+                  borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', 
+                  borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', 
+                  width: '160px', 
+                  minWidth: '160px', 
+                  maxWidth: '160px', 
+                  boxSizing: 'border-box', 
+                  padding: '8px',
+                  background: 'white'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     {mapManuallyDisplay}
                   </div>
                 </Table.Td>
-                <Table.Td className="cell-height" ta="center" style={{ borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', width: '160px', minWidth: '160px', maxWidth: '160px', boxSizing: 'border-box', padding: '8px', }}>
+                <Table.Td className="cell-height" ta="center" style={{ 
+                  borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', 
+                  borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', 
+                  width: '160px', 
+                  minWidth: '160px', 
+                  maxWidth: '160px', 
+                  boxSizing: 'border-box', 
+                  padding: '8px',
+                  background: 'white'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     {valueDisplay}
                   </div>
                 </Table.Td>
-                <Table.Td className="cell-height" ta="center" style={{ borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', width: '160px', minWidth: '160px', maxWidth: '160px', boxSizing: 'border-box', padding: '8px', }}>
+                <Table.Td className="cell-height" ta="center" style={{ 
+                  borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', 
+                  borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', 
+                  width: '160px', 
+                  minWidth: '160px', 
+                  maxWidth: '160px', 
+                  boxSizing: 'border-box', 
+                  padding: '8px',
+                  background: 'white'
+                }}>
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                     {percDisplay}
                   </div>
@@ -860,6 +925,21 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [expandedCollaterals, setExpandedCollaterals] = useState<Record<number, boolean>>({});
 
+  // Refs for scroll synchronization
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+
+  // Synchronize horizontal scrolling between header and body
+  const handleHorizontalScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollLeft = e.currentTarget.scrollLeft;
+    if (headerScrollRef.current && e.currentTarget !== headerScrollRef.current) {
+      headerScrollRef.current.scrollLeft = scrollLeft;
+    }
+    if (bodyScrollRef.current && e.currentTarget !== bodyScrollRef.current) {
+      bodyScrollRef.current.scrollLeft = scrollLeft;
+    }
+  };
+
   // Initialize all collaterals as expanded
   useEffect(() => {
     const initialExpanded: Record<number, boolean> = {};
@@ -999,7 +1079,6 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
     });
 
     const checkFacilityExpiry = (facility: any) => {
-      return;
       if (facility?.limitStatus === 'E') {
         expiredFacilities.push(`${facility.name ?? 'Unnamed'} (${facility.limitId ?? 'N/A'})`);
       }
@@ -1336,14 +1415,6 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
                 facilityAllocation = (colAED * facilityLimit) / totalProposedAED;
               }
             }
-            // if (facilityAllocation > facilityLimit + 0.01) {
-            //   hasParentChildViolation = true;
-            //   parentChildErrors.push(
-            //     `${fac.name || fac.category} (${fac.limitId}) allocation ${facilityAllocation.toFixed(
-            //       2
-            //     )} exceeds facility limit ${facilityLimit.toFixed(2)}`
-            //   );
-            // }
 
             if (parentAllocation !== undefined && facilityAllocation > parentAllocation + 0.01) {
               hasParentChildViolation = true;
@@ -1385,7 +1456,6 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
     };
     const payload = {
       obligorId: obligorDetails?.ObligorId || 'OBLIGOR-001',
-      // cpId: obligorDetails?.CpId,
       cpId: obligorDetails?.ObligorId === 'OBLIGOR-001' ? 'AKSHAY' : obligorDetails?.CpId,
       isMappedAtCpLevel: mapAtCpLevel,
       coverageDetails: defaultCollaterals.map((col: any, cIdx: number) => {
@@ -1517,11 +1587,11 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
   const minTableWidth = FIRST_COL_WIDTH + SECOND_COL_WIDTH +
     defaultCollaterals.reduce((sum, _, idx) => {
       return sum + (expandedCollaterals[idx] ? COLLATERAL_COL_WIDTH * 3 : COLLATERAL_COL_WIDTH_COLLAPSED);
-    }, 0) + SECOND_COL_WIDTH;
+    }, 0);
 
   return (
     <>
-      <Card shadow="sm" padding="{0}" radius="xl" withBorder>
+      <Card shadow="sm" padding="xl" radius="xl" withBorder>
         <Group justify="space-between" align="center" mb="sm">
           <Title order={4} fw={500}>{t('customTable.collateralFacilityMapping')}</Title>
           <Group gap={6}>
@@ -1536,15 +1606,32 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
         </Group>
 
         <Paper withBorder shadow="none" radius="xs" p={0} m={0} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box style={{ flex: 1 }}>
-            <ScrollArea type="auto" scrollbarSize={10} style={{ height: '100%', width: '100%', background: 'white' }}>
+          <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '600px' }}>
+            {/* Header Section - Sticky at top with horizontal scroll */}
+            <Box 
+              ref={headerScrollRef}
+              onScroll={handleHorizontalScroll}
+              style={{ 
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                borderBottom: '1px solid #dee2e6',
+                background: 'white',
+                position: 'sticky',
+                top: 0,
+                zIndex: 5
+              }}
+            >
               <Table
                 withRowBorders={false}
                 verticalSpacing="xs"
                 horizontalSpacing="xs"
                 className="table-default"
-                highlightOnHover
-                style={{ minWidth: minTableWidth, tableLayout: 'fixed', borderCollapse: 'collapse' }}
+                style={{ 
+                  minWidth: minTableWidth, 
+                  tableLayout: 'fixed', 
+                  borderCollapse: 'collapse',
+                  marginBottom: 0
+                }}
               >
                 <TableHeader
                   defaultCollaterals={defaultCollaterals}
@@ -1560,6 +1647,31 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
                   expandedCollaterals={expandedCollaterals}
                   toggleCollateralExpand={toggleCollateralExpand}
                 />
+              </Table>
+            </Box>
+
+            {/* Body Section - Vertical and horizontal scroll */}
+            <Box 
+              ref={bodyScrollRef}
+              onScroll={handleHorizontalScroll}
+              style={{ 
+                overflowX: 'auto',
+                overflowY: 'auto',
+                flex: 1,
+                background: 'white'
+              }}
+            >
+              <Table
+                withRowBorders={false}
+                verticalSpacing="xs"
+                horizontalSpacing="xs"
+                className="table-default"
+                style={{ 
+                  minWidth: minTableWidth, 
+                  tableLayout: 'fixed', 
+                  borderCollapse: 'collapse'
+                }}
+              >
                 <Table.Tbody>
                   <FacilityRows
                     facilities={facilities}
@@ -1582,11 +1694,11 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
                   />
                 </Table.Tbody>
               </Table>
-            </ScrollArea>
+            </Box>
           </Box>
         </Paper>
 
-        <Box style={{ borderTop: '1px solid #eee', paddingTop: 24, paddingBottom: 2 }}>
+        <Box style={{ borderTop: '1px solid #eee', paddingTop: 24, paddingBottom: 2, marginTop: 16 }}>
           <Stack gap={0}>
             {disclaimerText && (
               <Text size="xs" c="#262626">
@@ -1606,22 +1718,23 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
             </Text>
           </Stack>
         </Box>
+
+        <Box mt={6}>
+          <Group justify="flex-end">
+            {!isViewMapping && (
+              <Group gap="sm">
+                <Button variant="light" color="gray" radius="xl" size="sm" onClick={() => setObligorId('')}>
+                  Cancel
+                </Button>
+                <Button color="#213C81" radius="xl" size="sm" onClick={onSubmitForm} loading={isSubmitting}>
+                  Next
+                </Button>
+              </Group>
+            )}
+          </Group>
+        </Box>
       </Card>
 
-      <Box mt={6}>
-        <Group justify="flex-end">
-          {!isViewMapping && (
-            <Group gap="sm">
-              <Button variant="light" color="gray" radius="xl" size="sm" onClick={() => setObligorId('')}>
-                Cancel
-              </Button>
-              <Button color="#213C81" radius="xl" size="sm" onClick={onSubmitForm} loading={isSubmitting}>
-                Next
-              </Button>
-            </Group>
-          )}
-        </Group>
-      </Box>
       <CoverageExceededModal
         opened={opened}
         title={disclaimerExpiredText ? t('customTable.expiredDetected') : t('customTable.coverageLimitExceeded')}
