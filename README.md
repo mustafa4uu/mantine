@@ -6,14 +6,12 @@ import {
   Radio,
   Group,
   Table,
-  ScrollArea,
   Button,
   Stack,
   NumberInput,
   Box,
   Card,
   Checkbox,
-  Divider,
   ActionIcon,
 } from '@mantine/core';
 import { Controller, useForm } from 'react-hook-form';
@@ -43,11 +41,13 @@ const FIRST_COL_WIDTH = 190;
 const SECOND_COL_WIDTH = 220;
 const COLLATERAL_COL_WIDTH = 150;
 const COLLATERAL_COL_WIDTH_COLLAPSED = 80;
+
+// Sticky column styles
 const stickyLeft = {
   position: 'sticky' as const,
   left: 0,
   background: '#f8f9fa',
-  zIndex: 3,
+  zIndex: 5,
   borderRight: '1px solid #dee2e6',
 };
 
@@ -55,18 +55,20 @@ const secondColSticky = {
   position: 'sticky' as const,
   left: FIRST_COL_WIDTH,
   background: '#f8f9fa',
-  zIndex: 2,
+  zIndex: 4,
   borderRight: '1px solid #dee2e6',
 };
+
 const secondStickyColr = { background: '#E7ECF3' };
 
+// Empty left th for alignment
 const EmptyLeftTh: React.FC<{ width: number }> = ({ width }) => (
   <Table.Th
     w={width}
     style={{
       position: 'sticky',
       left: 0,
-      zIndex: 4,
+      zIndex: 6,
       border: 'none',
       padding: 0,
       background: 'transparent',
@@ -76,6 +78,7 @@ const EmptyLeftTh: React.FC<{ width: number }> = ({ width }) => (
   </Table.Th>
 );
 
+// Helper function to find facility by index
 const findFacilityByIndex = (facilities: any[], targetIdx: number): any => {
   let currentIdx = 0;
   const traverse = (facList: any[]): any => {
@@ -92,7 +95,20 @@ const findFacilityByIndex = (facilities: any[], targetIdx: number): any => {
   return traverse(facilities);
 };
 
-const TableHeader: React.FC<{
+// Helper function to collect all child bids
+const collectChildBids = (facility: any): string[] => {
+  let bids: string[] = [];
+  if (facility.children) {
+    facility.children.forEach((child: any) => {
+      bids.push(child.bid);
+      bids = bids.concat(collectChildBids(child));
+    });
+  }
+  return bids;
+};
+
+// Header Component for Scrollable Section (Right Side)
+const ScrollableHeader: React.FC<{
   defaultCollaterals: any[];
   isViewMapping: boolean;
   control: any;
@@ -101,8 +117,6 @@ const TableHeader: React.FC<{
   headerMapChecked: Record<number, boolean>;
   headerMapIndeterminate: Record<number, boolean>;
   handleHeaderMapChange: (cIdx: number, checked: boolean) => void;
-  expandAll: boolean;
-  setExpandAll: (expand: boolean) => void;
   expandedCollaterals: Record<number, boolean>;
   toggleCollateralExpand: (cIdx: number) => void;
 }> = ({
@@ -114,36 +128,18 @@ const TableHeader: React.FC<{
   headerMapChecked,
   headerMapIndeterminate,
   handleHeaderMapChange,
-  expandAll,
-  setExpandAll,
   expandedCollaterals,
   toggleCollateralExpand,
 }) => {
-    const { t } = useI18n(COLLATERAL_NAMESPACE);
-    if (defaultCollaterals.length === 0) return null;
+  const { t } = useI18n(COLLATERAL_NAMESPACE);
 
-    const handleExpandAll = () => {
-      setExpandAll(prev => !prev);
-    };
-    return (
+  if (defaultCollaterals.length === 0) return null;
+
+  return (
+    <Table withTableBorder={false} withColumnBorders={false}>
       <Table.Thead>
+        {/* Header Row 1 - Collateral Category */}
         <Table.Tr>
-          <EmptyLeftTh width={FIRST_COL_WIDTH} />
-          <Table.Th
-            w={SECOND_COL_WIDTH}
-            className="header-cell top-left-aligned"
-            style={secondColSticky}
-            pt="sm" pl="sm"
-          >
-            <Text size="sm" c="#262626" fw={600}>
-              {t('customTable.collateralCategory')}
-            </Text>
-            <Text size="sm" c="#262626">
-              {t('customTable.collAmount')}
-              <Text span size="xs" c="red">**</Text>
-            </Text>
-          </Table.Th>
-
           {defaultCollaterals.map((col: any, idx: number) => (
             <Table.Th
               key={col.bid}
@@ -153,27 +149,43 @@ const TableHeader: React.FC<{
                 width: expandedCollaterals[idx]
                   ? COLLATERAL_COL_WIDTH * 3
                   : COLLATERAL_COL_WIDTH_COLLAPSED,
-                background: 'white',
-                position: 'sticky',
-                top: 0,
-                zIndex: 4
+                minWidth: expandedCollaterals[idx]
+                  ? COLLATERAL_COL_WIDTH * 3
+                  : COLLATERAL_COL_WIDTH_COLLAPSED,
+                backgroundColor: '#f8f9fa',
+                height: '82px',
+                padding: 0,
               }}
             >
-              <Group justify="space-between" wrap="nowrap" pt="sm" pl="sm">
+              <Group justify="space-between" wrap="nowrap" pt="sm" pl="sm" style={{ width: '100%' }}>
                 <Box style={{ overflow: 'hidden', flex: 1 }}>
-                  <Text size="sm" fw={700} c={col.isChanged === 1 ? 'red' : '#262626'} truncate="end"
-                    style={{ whiteSpace: expandedCollaterals[idx] ? 'normal' : 'normal', wordBreak: 'break-word' }}>
-                    {expandedCollaterals[idx] ? `${col.category} (${col.collateralId})` : `${col.category?.slice(0, 5)} (${col.collateralId?.slice(0, 5)}...`}
-                    {col.collateralStatus !== 'ACTIVE' && (<Text span c="red" truncate> {" "}— {t('customTable.expiredn')} </Text>)}
+                  <Text
+                    size="sm"
+                    fw={700}
+                    c={col.isChanged === 1 ? 'red' : '#262626'}
+                    truncate="end"
+                    style={{
+                      whiteSpace: expandedCollaterals[idx] ? 'normal' : 'normal',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {expandedCollaterals[idx]
+                      ? `${col.category} (${col.collateralId})`
+                      : `${col.category?.slice(0, 5)} (${col.collateralId?.slice(0, 5)}...`}
+                    {col.collateralStatus !== 'ACTIVE' && (
+                      <Text span c="red" truncate>
+                        {' '}— {t('customTable.expiredn')}
+                      </Text>
+                    )}
                   </Text>
                   {expandedCollaterals[idx] && (
                     <>
                       <Text size="sm" c="#262626" truncate="end">
-                        {col.proposedAmount.currency}{" "}
+                        {col.proposedAmount.currency}{' '}
                         {formatCurrency(col.proposedAmount.value)}
                       </Text>
                       <Text size="sm" c="dimmed" truncate="end">
-                        {col.proposedAmount.baseCurrency}{" "}
+                        {col.proposedAmount.baseCurrency}{' '}
                         {formatCurrency(col.proposedAmount.baseValue)}
                       </Text>
                     </>
@@ -183,40 +195,39 @@ const TableHeader: React.FC<{
                   size="xs"
                   variant="subtle"
                   onClick={() => toggleCollateralExpand(idx)}
-                  style={{ flexShrink: 0 }}
+                  style={{ flexShrink: 0, marginRight: '4px' }}
                 >
-                  {expandedCollaterals[idx] ? (
-                    <IconMinus size={14} />
-                  ) : (
-                    <IconPlus size={14} />
-                  )}
+                  {expandedCollaterals[idx] ? <IconMinus size={14} /> : <IconPlus size={14} />}
                 </ActionIcon>
               </Group>
             </Table.Th>
           ))}
         </Table.Tr>
 
-        {/* Header Row 2 - Collateral Description (only shown when expanded) */}
+        {/* Header Row 2 - Collateral Description */}
         <Table.Tr>
-          <EmptyLeftTh width={FIRST_COL_WIDTH} />
-          <Table.Th className="header-cell" style={secondColSticky} pt="sm" pl="sm">
-            <Text size="sm" fw={600} c="#262626">{t('customTable.collateralDescription')}</Text>
-          </Table.Th>
           {defaultCollaterals.map((col: any, idx: number) => (
             <Table.Th
               key={col.bid}
               colSpan={expandedCollaterals[idx] ? 3 : 1}
-              className="header-cell top-left-aligned"
+              className="header-cell"
               style={{
-                ...(!expandedCollaterals[idx] ? { background: '#fff', border: '0', borderLeft: '0', borderRight: '0', borderTop: '0', borderBottom: '0' } : { background: 'white' }),
-                position: 'sticky',
-                top: 41,
-                zIndex: 4
+                backgroundColor: '#f8f9fa',
+                height: '42px',
+                padding: '8px 0 0 12px',
+                ...(!expandedCollaterals[idx] && {
+                  background: '#fff',
+                  borderLeft: '0',
+                  borderRight: '0',
+                  borderTop: '0',
+                  borderBottom: '0',
+                }),
               }}
-              pt="sm" pl="sm"
             >
               {expandedCollaterals[idx] ? (
-                <Text className="des" size="sm" c="#4F4F4F" truncate="end">{col.description}.</Text>
+                <Text size="sm" c="#4F4F4F" className="des">
+                  {col.description}.
+                </Text>
               ) : (
                 <Box>&nbsp;</Box>
               )}
@@ -224,19 +235,8 @@ const TableHeader: React.FC<{
           ))}
         </Table.Tr>
 
-        {/* Header Row 3 - Allocation Model (only shown when expanded) */}
+        {/* Header Row 3 - Allocation Model */}
         <Table.Tr>
-          <EmptyLeftTh width={FIRST_COL_WIDTH} />
-          <Table.Th className="header-cell" pt="sm" pl="sm" style={{ 
-            position: 'sticky', 
-            left: FIRST_COL_WIDTH, 
-            zIndex: 4, 
-            background: 'white', 
-            borderBottom: '0px !important',
-            top: 82
-          }}>
-            <Text size="sm" fw={600}>{t('customTable.allocationModel')}</Text>
-          </Table.Th>
           {defaultCollaterals.map((col: any, idx: number) => (
             <Table.Th
               key={col.bid}
@@ -244,34 +244,36 @@ const TableHeader: React.FC<{
               className="cell-all-border"
               style={{
                 background: 'white',
+                height: '120px',
+                padding: 0,
+                borderBottom: '1px solid #dee2e6',
                 width: expandedCollaterals[idx] ? COLLATERAL_COL_WIDTH * 3 : COLLATERAL_COL_WIDTH_COLLAPSED,
-                position: 'sticky',
-                top: 82,
-                zIndex: 4
               }}
             >
               {expandedCollaterals[idx] ? (
-                <Controller
-                  name={`model-${idx}`}
-                  control={control}
-                  render={({ field }) => (
-                    <Radio.Group
-                      {...field}
-                      size="xs"
-                      disabled={isViewMapping || mapAtCpLevel}
-                      onChange={(value) => {
-                        field.onChange(value);
-                        handleModelChange(idx, value as string);
-                      }}
-                    >
-                      <Stack gap={16} pt="sm" pl="sm">
-                        <Radio value="prop" label={t('customTable.proportionate')} size="sm" c="#1A1A1A" />
-                        <Radio value="perc" label={t('customTable.percentage')} size="sm" c="#1A1A1A" />
-                        <Radio value="abs" label={t('customTable.absolute')} size="sm" c="#1A1A1A" />
-                      </Stack>
-                    </Radio.Group>
-                  )}
-                />
+                <Box style={{ padding: '8px 0 0 12px' }}>
+                  <Controller
+                    name={`model-${idx}`}
+                    control={control}
+                    render={({ field }) => (
+                      <Radio.Group
+                        {...field}
+                        size="xs"
+                        disabled={isViewMapping || mapAtCpLevel}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          handleModelChange(idx, value as string);
+                        }}
+                      >
+                        <Stack gap={16}>
+                          <Radio value="prop" label={t('customTable.proportionate')} size="sm" c="#1A1A1A" />
+                          <Radio value="perc" label={t('customTable.percentage')} size="sm" c="#1A1A1A" />
+                          <Radio value="abs" label={t('customTable.absolute')} size="sm" c="#1A1A1A" />
+                        </Stack>
+                      </Radio.Group>
+                    )}
+                  />
+                </Box>
               ) : (
                 <Box>&nbsp;</Box>
               )}
@@ -279,47 +281,20 @@ const TableHeader: React.FC<{
           ))}
         </Table.Tr>
 
-        {/* Header Row 4 - Coverage Headers (only shown when expanded) */}
+        {/* Header Row 4 - Coverage Headers */}
         <Table.Tr>
-          <Table.Th ta="left" style={{ 
-            ...stickyLeft, 
-            ...secondStickyColr,
-            position: 'sticky',
-            top: 123,
-            zIndex: 4
-          }}>
-            <Group gap={4}>
-              <ActionIcon size="xs" variant="transparent" onClick={handleExpandAll} >
-                {expandAll ? (<IconChevronsUp size={14} />) : (<IconChevronsDown size={14} />)}
-              </ActionIcon>
-              <Text size="sm" fw={500}>{t('customTable.facilityDetails')}</Text>
-            </Group>
-          </Table.Th>
-          <Table.Th className="cell-all-border cell-padding-remove" ta="left" style={{ 
-            ...secondColSticky, 
-            ...secondStickyColr,
-            position: 'sticky',
-            left: FIRST_COL_WIDTH,
-            top: 123,
-            zIndex: 4
-          }}>
-            <Text size="sm" fw={500} m={0} style={{ lineHeight: 'calc(1em + 2px)' }}>
-              {t('customTable.facilityAmount')}<br />
-              {t('customTable.rPA')}
-            </Text>
-          </Table.Th>
           {defaultCollaterals.map((col: any, idx: number) => (
             <Table.Th
               key={col.bid}
               colSpan={expandedCollaterals[idx] ? 3 : 1}
-              className="cell-all-border cell-padding-remove"
+              className="cell-all-border"
               style={{
                 ...(!expandedCollaterals[idx]
                   ? { background: '#fff', border: 0 }
                   : { backgroundColor: '#f8f9fa' }),
-                position: 'sticky',
-                top: 123,
-                zIndex: 4
+                height: '70px',
+                padding: 0,
+                borderBottom: '1px solid #dee2e6',
               }}
               ta="center"
             >
@@ -333,15 +308,13 @@ const TableHeader: React.FC<{
                     </Table.Tr>
 
                     <Table.Tr>
-                      <Table.Td style={{ padding: 4 }}>
+                      <Table.Td style={{ padding: 4, width: COLLATERAL_COL_WIDTH }}>
                         <Group gap={4} justify="center">
                           <Checkbox
                             checked={headerMapChecked[idx] || false}
                             size="xs"
                             indeterminate={headerMapIndeterminate[idx] || false}
-                            onChange={(e) =>
-                              handleHeaderMapChange(idx, e.currentTarget.checked)
-                            }
+                            onChange={(e) => handleHeaderMapChange(idx, e.currentTarget.checked)}
                             disabled={isViewMapping || mapAtCpLevel}
                           />
                           <Text size="sm" style={{ fontSize: 12 }}>
@@ -350,13 +323,13 @@ const TableHeader: React.FC<{
                         </Group>
                       </Table.Td>
 
-                      <Table.Td style={{ padding: 4, textAlign: "center" }}>
+                      <Table.Td style={{ padding: 4, width: COLLATERAL_COL_WIDTH, textAlign: 'center' }}>
                         <Text size="sm" style={{ fontSize: 12 }}>
                           {t('customTable.valueAED')}
                         </Text>
                       </Table.Td>
 
-                      <Table.Td style={{ padding: 4, textAlign: "center" }}>
+                      <Table.Td style={{ padding: 4, width: COLLATERAL_COL_WIDTH, textAlign: 'center' }}>
                         <Text size="sm" style={{ fontSize: 12 }}>
                           {t('customTable.percentage')}
                         </Text>
@@ -371,12 +344,111 @@ const TableHeader: React.FC<{
           ))}
         </Table.Tr>
       </Table.Thead>
-    );
-  };
+    </Table>
+  );
+};
 
-const FacilityRow: React.FC<{
+// Facility Row Component for Sticky Section (Left Side)
+const StickyFacilityRow: React.FC<{
   facility: any;
-  facilities: any[];
+  facilityIndex: number;
+  level?: number;
+  isLastInGroup?: boolean;
+  hasChildren: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+}> = ({
+  facility,
+  facilityIndex,
+  level = 0,
+  isLastInGroup = false,
+  hasChildren,
+  expanded,
+  onToggle,
+}) => {
+  const { t } = useI18n(COLLATERAL_NAMESPACE);
+
+  const borderBottomStyle = isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6';
+  const borderTopStyle = facilityIndex === 0 ? 'none' : '1px solid #dee2e6';
+
+  return (
+    <Table.Tr>
+      <Table.Td
+        className="cell-height"
+        style={{
+          ...stickyLeft,
+          borderBottom: borderBottomStyle,
+          borderTop: borderTopStyle,
+          paddingLeft: `${level * 24 + 12}px`,
+          width: FIRST_COL_WIDTH,
+          minWidth: FIRST_COL_WIDTH,
+          maxWidth: FIRST_COL_WIDTH,
+          height: '80px',
+        }}
+      >
+        <Group gap="xs" wrap="nowrap" style={{ height: '100%', alignItems: 'flex-start' }}>
+          {hasChildren && (
+            <ActionIcon
+              size="xs"
+              variant="transparent"
+              onClick={onToggle}
+              style={{ padding: 0, marginTop: '2px' }}
+            >
+              {expanded ? <IconChevronDown size={14} /> : <IconChevronUp size={14} />}
+            </ActionIcon>
+          )}
+          {!hasChildren && <Box w={20} />}
+          <Box style={{ overflow: 'hidden' }}>
+            {facility.limitStatus === 'E' && (
+              <Text size="xs" c="red">
+                {t('customTable.expiredn')}
+              </Text>
+            )}
+            <Text size="sm" className="ellipsis-text" style={{ fontSize: '12px' }}>
+              {facility.limitId}
+            </Text>
+            <Text size="sm" fw={600} style={{ fontSize: '12px' }}>
+              {facility.name ?? facility.category}
+            </Text>
+            <Text size="sm" className="ellipsis-text" style={{ fontSize: '12px' }}>
+              {facility.description}
+            </Text>
+          </Box>
+        </Group>
+      </Table.Td>
+      <Table.Td
+        className="cell-height"
+        style={{
+          ...secondColSticky,
+          borderBottom: borderBottomStyle,
+          borderTop: borderTopStyle,
+          textAlign: 'right',
+          width: SECOND_COL_WIDTH,
+          minWidth: SECOND_COL_WIDTH,
+          maxWidth: SECOND_COL_WIDTH,
+          height: '80px',
+        }}
+      >
+        <Stack gap={2} align="flex-end" style={{ height: '100%' }}>
+          <Text size="sm" style={{ fontSize: '12px' }}>
+            {facility.limitProposed.currency
+              ? `${facility.limitProposed.currency} ${formatCurrency(facility.limitProposed.value)}`
+              : '-'}
+          </Text>
+          <Text size="sm" c="dimmed" style={{ fontSize: '12px' }}>
+            {facility.limitProposed.baseCurrency
+              ? `${facility.limitProposed.baseCurrency} ${formatCurrency(facility.limitProposed.baseValue)}`
+              : '-'}
+          </Text>
+        </Stack>
+      </Table.Td>
+    </Table.Tr>
+  );
+};
+
+// Facility Row Component for Scrollable Section (Right Side)
+const ScrollableFacilityRow: React.FC<{
+  facility: any;
   facilityIndex: number;
   defaultCollaterals: any[];
   watchedForm: any;
@@ -387,18 +459,15 @@ const FacilityRow: React.FC<{
   totalProposedAED: number;
   handlePercentageChange: (cIdx: number, fIdx: number, value: number | null) => void;
   handleValueChange: (cIdx: number, fIdx: number, value: number | null) => void;
-  handleMapManuallyChange: (cIdx: number, fIdx: number, checked: boolean) => void;
+  handleMapManuallyChange: (cIdx: number, fIdx: number, checked: boolean, isParentAction?: boolean) => void;
   handleMapManuallyWithChildren?: (cIdx: number, checked: boolean, facility: any) => void;
   formatTwoDecimals: (num: any) => string;
-  level?: number;
   isLastInGroup?: boolean;
   mapAtCpLevel?: boolean;
   selectedFacilities?: Map<string, Set<string>>;
-  expandAll?: boolean;
   expandedCollaterals: Record<number, boolean>;
 }> = ({
   facility,
-  facilities,
   facilityIndex,
   defaultCollaterals,
   watchedForm,
@@ -412,490 +481,339 @@ const FacilityRow: React.FC<{
   handleMapManuallyChange,
   handleMapManuallyWithChildren,
   formatTwoDecimals,
-  level = 0,
   isLastInGroup = false,
   mapAtCpLevel = false,
   selectedFacilities = new Map(),
-  expandAll = true,
   expandedCollaterals,
 }) => {
-    const { t } = useI18n(COLLATERAL_NAMESPACE);
-    const [expanded, setExpanded] = useState(expandAll ?? true);
+  const borderBottomStyle = isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6';
+  const borderTopStyle = facilityIndex === 0 ? 'none' : '1px solid #dee2e6';
 
-    useEffect(() => {
-      setExpanded(expandAll ?? true);
-    }, [expandAll]);
-
-    const hasChildren = facility.children && facility.children.length > 0;
-
-    const getProportionateValues = (colAED: number) => {
-      if (totalProposedAED <= 0) return { pct: 0, value: 0 };
-      const facilityLimit = parseAED(facility.limitProposed?.baseValue || '0');
-      const value = (colAED * facilityLimit) / totalProposedAED;
-      const pct = colAED > 0 ? (value / colAED) * 100 : 0;
-      return { pct, value };
+  const hasAnyManualMappingForCollateral = (colId: string, cIdx: number): boolean => {
+    let hasManual = false;
+    const traverse = (facList: any[]) => {
+      facList.forEach((fac) => {
+        if (watchedForm[`map-${cIdx}-${fac.bid}`]) hasManual = true;
+        if (fac.children) traverse(fac.children);
+      });
     };
+    traverse(defaultCollaterals);
+    return hasManual;
+  };
 
-    const hasAnyManualMappingForCollateral = (colId: string, cIdx: number): boolean => {
-      let hasManual = false;
-      const traverse = (facList: any[]) => {
-        facList.forEach((fac) => {
-          if (watchedForm[`map-${cIdx}-${fac.bid}`]) hasManual = true;
-          if (fac.children) traverse(fac.children);
-        });
-      };
-      traverse(facilities);
-      return hasManual;
-    };
+  return (
+    <Table.Tr>
+      {defaultCollaterals.map((col: any, cIdx: number) => {
+        const isExpanded = expandedCollaterals[cIdx];
 
-    return (
-      <>
-        <Table.Tr>
-          <Table.Td
-            className="cell-height"
-            style={{
-              ...stickyLeft,
-              borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6',
-              borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6',
-              paddingLeft: `${level * 24 + 12}px`,
-              background: '#f8f9fa',
-            }}
-          >
-            <Group gap="xs" wrap="nowrap">
-              {hasChildren && (
-                <ActionIcon size="xs" variant="transparent" onClick={() => setExpanded(!expanded)} style={{ padding: 0 }}>
-                  {expanded ? <IconChevronDown size={14} /> : <IconChevronUp size={14} />}
-                </ActionIcon>
-              )}
-              {!hasChildren && <Box w={20} />}
-              <Box>
-                {facility.limitStatus === 'E' && (
-                  <Text c="red" >{t('customTable.expiredn')}</Text>)}
-                <Text size="sm" className="ellipsis-text">{facility.limitId}</Text>
-                <Text size="sm" fw={600}>{facility.name ?? facility.category}</Text>
-                <Text size="sm" className="ellipsis-text">{facility.description}</Text>
+        if (!isExpanded) {
+          return (
+            <Table.Td
+              key={`${facilityIndex}-${cIdx}`}
+              colSpan={1}
+              className="cell-height"
+              ta="center"
+              style={{
+                borderBottom: borderBottomStyle,
+                borderTop: borderTopStyle,
+                width: COLLATERAL_COL_WIDTH_COLLAPSED,
+                minWidth: COLLATERAL_COL_WIDTH_COLLAPSED,
+                maxWidth: COLLATERAL_COL_WIDTH_COLLAPSED,
+                height: '80px',
+                padding: '4px',
+                background: 'white',
+                boxSizing: 'border-box',
+              }}
+            >
+              <Box style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                &nbsp;
               </Box>
-            </Group>
-          </Table.Td>
-          <Table.Td
-            className="cell-height"
-            style={{
-              ...secondColSticky,
-              borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6',
-              borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6',
-              textAlign: 'right',
-              background: '#f8f9fa',
-            }}
-          >
-            <Stack gap={4} align="flex-end">
-              <Text size="sm" style={{ fontSize: 12 }}>
-                {facility.limitProposed.currency ? `${facility.limitProposed.currency} ${formatCurrency(facility.limitProposed.value)}` : '-'}
-              </Text>
-              <Text size="sm" c="dimmed" style={{ fontSize: 12 }}>
-                {facility.limitProposed.baseCurrency ? `${facility.limitProposed.baseCurrency} ${formatCurrency(facility.limitProposed.baseValue)}` : '-'}
-              </Text>
-            </Stack>
-          </Table.Td>
+            </Table.Td>
+          );
+        }
 
-          {defaultCollaterals.map((col: any, cIdx: number) => {
-            const isExpanded = expandedCollaterals[cIdx];
+        const model = watchedForm[`model-${cIdx}`];
+        const colAED = parseAED(col.proposedAmount?.baseValue);
+        const apiPct = getApiValue(col.bid, facilityIndex, 'pct');
+        const apiVal = getApiValue(col.bid, facilityIndex, 'value');
 
-            if (!isExpanded) {
-              // When collapsed, render a single empty cell
-              return (
-                <Table.Td
-                  key={`${facilityIndex}-${cIdx}`}
-                  colSpan={1}
-                  className="cell-height"
-                  ta="center"
-                  style={{
-                    border: 'none',
-                    background: 'white',
-                    width: COLLATERAL_COL_WIDTH_COLLAPSED,
-                    minWidth: COLLATERAL_COL_WIDTH_COLLAPSED,
-                    maxWidth: COLLATERAL_COL_WIDTH_COLLAPSED,
-                    boxSizing: 'border-box',
-                    padding: '8px',
+        const isMapManuallyChecked = watchedForm[`map-${cIdx}-${facility.bid}`] || false;
+        const anyManualMappingForThisCollateral = hasAnyManualMappingForCollateral(col.bid, cIdx);
+
+        const getProportionateValues = () => {
+          if (totalProposedAED <= 0) return { pct: 0, value: 0 };
+          const facilityLimit = parseAED(facility.limitProposed?.baseValue || '0');
+          const value = (colAED * facilityLimit) / totalProposedAED;
+          const pct = colAED > 0 ? (value / colAED) * 100 : 0;
+          return { pct, value };
+        };
+
+        const propValues = getProportionateValues();
+
+        let finalPct = 0;
+        let finalVal = 0;
+
+        if (model === 'prop') {
+          finalPct = propValues.pct;
+          finalVal = propValues.value;
+        } else if (model === 'perc') {
+          finalPct = watchedForm[`perc-${cIdx}-${facility.bid}`] ?? apiPct;
+          finalVal = (finalPct / 100) * colAED;
+        } else if (model === 'abs') {
+          finalVal = watchedForm[`abs-${cIdx}-${facility.bid}`] ?? apiVal;
+          finalPct = colAED > 0 ? (finalVal / colAED) * 100 : 0;
+        }
+
+        let mapManuallyDisplay: React.ReactNode = null;
+        let valueDisplay: React.ReactNode = null;
+        let percDisplay: React.ReactNode = null;
+
+        if (mapAtCpLevel) {
+          mapManuallyDisplay = (
+            <Checkbox size="xs" disabled checked={false} styles={{ root: { display: 'flex', justifyContent: 'center' } }} />
+          );
+          valueDisplay = <Text size="sm">{formatTwoDecimals(finalVal)}</Text>;
+          percDisplay = <Text size="sm">{formatTwoDecimals(finalPct)} %</Text>;
+        } else if (isViewMapping) {
+          mapManuallyDisplay = (
+            <Checkbox size="xs" disabled checked={isMapManuallyChecked} styles={{ root: { display: 'flex', justifyContent: 'center' } }} />
+          );
+          valueDisplay = <Text size="sm">{formatTwoDecimals(apiVal)}</Text>;
+          percDisplay = <Text size="sm">{formatTwoDecimals(apiPct)} %</Text>;
+        } else {
+          mapManuallyDisplay = (
+            <Controller
+              name={`map-${cIdx}-${facility.bid}`}
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  size="xs"
+                  styles={{ root: { display: 'flex', justifyContent: 'center' } }}
+                  checked={field.value || false}
+                  onChange={(e) => {
+                    const checked = e.currentTarget.checked;
+                    field.onChange(checked);
+                    if (handleMapManuallyWithChildren) {
+                      handleMapManuallyWithChildren(cIdx, checked, facility);
+                    } else {
+                      handleMapManuallyChange(cIdx, facilityIndex, checked, false);
+                    }
                   }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', background: 'white', }}>
-                    &nbsp;
-                  </div>
-                </Table.Td>
-              );
-            }
+                />
+              )}
+            />
+          );
+          
+          const isSelected = selectedFacilities.get(col.bid)?.has(facility.bid) || false;
 
-            // Expanded view - render all three cells
-            const model = watchedForm[`model-${cIdx}`];
-            const colAED = parseAED(col.proposedAmount?.baseValue);
-            const apiPct = getApiValue(col.bid, facilityIndex, 'pct');
-            const apiVal = getApiValue(col.bid, facilityIndex, 'value');
-
-            const isMapManuallyChecked = watchedForm[`map-${cIdx}-${facility.bid}`] || false;
-            const anyManualMappingForThisCollateral = hasAnyManualMappingForCollateral(col.bid, cIdx);
-
-            const propValues = getProportionateValues(colAED);
-
-            let finalPct = 0;
-            let finalVal = 0;
-
+          if (!anyManualMappingForThisCollateral) {
+            percDisplay = <Text size="sm">{formatTwoDecimals(finalPct)} %</Text>;
+            valueDisplay = <Text size="sm">{formatTwoDecimals(finalVal)}</Text>;
+          } else if (!isMapManuallyChecked) {
+            percDisplay = <Text size="sm" c="dimmed">0.00%</Text>;
+            valueDisplay = <Text size="sm" c="dimmed">--</Text>;
+          } else {
             if (model === 'prop') {
-              finalPct = propValues.pct;
-              finalVal = propValues.value;
-            } else if (model === 'perc') {
-              finalPct = watchedForm[`perc-${cIdx}-${facility.bid}`] ?? apiPct;
-              finalVal = (finalPct / 100) * colAED;
-            } else if (model === 'abs') {
-              finalVal = watchedForm[`abs-${cIdx}-${facility.bid}`] ?? apiVal;
-              finalPct = colAED > 0 ? (finalVal / colAED) * 100 : 0;
-            }
-
-            let mapManuallyDisplay: React.ReactNode = null;
-            let percDisplay: React.ReactNode = null;
-            let valueDisplay: React.ReactNode = null;
-
-            if (mapAtCpLevel) {
-              mapManuallyDisplay = (
-                <Checkbox size="xs" disabled checked={false} styles={{ root: { display: 'flex', justifyContent: 'right' } }} />
-              );
-              percDisplay = <Text size="sm">{formatTwoDecimals(finalPct)} %</Text>;
-              valueDisplay = <Text size="sm">{formatTwoDecimals(finalVal)}</Text>;
-            } else if (isViewMapping) {
-              mapManuallyDisplay = (
-                <Checkbox size="xs" disabled checked={isMapManuallyChecked} styles={{ root: { display: 'flex', justifyContent: 'right' } }} />
-              );
-              percDisplay = <Text size="sm">{formatTwoDecimals(apiPct)} %</Text>;
-              valueDisplay = <Text size="sm">{formatTwoDecimals(apiVal)}</Text>;
-            } else {
-              mapManuallyDisplay = (
+              percDisplay = (
                 <Controller
-                  name={`map-${cIdx}-${facility.bid}`}
+                  name={`perc-${cIdx}-${facility.bid}`}
+                  control={control}
+                  render={({ field }) => {
+                    const displayValue = field.value ?? (apiPct || propValues.pct);
+                    return (
+                      <NumberInput
+                        {...field}
+                        size="sm"
+                        w={80}
+                        min={0}
+                        max={100}
+                        suffix="%"
+                        decimalScale={2}
+                        fixedDecimalScale
+                        disabled={!isSelected}
+                        onChange={(val) => {
+                          const num = val === '' || val === null ? 0 : Number(val);
+                          field.onChange(num);
+                          handlePercentageChange(cIdx, facilityIndex, num);
+                        }}
+                        value={displayValue}
+                        hideControls
+                        styles={{ input: { textAlign: 'center', fontSize: '12px' } }}
+                      />
+                    );
+                  }}
+                />
+              );
+              valueDisplay = (
+                <Controller
+                  name={`abs-${cIdx}-${facility.bid}`}
                   control={control}
                   render={({ field }) => (
-                    <Checkbox
-                      size="xs"
-                      styles={{ root: { display: 'flex', justifyContent: 'right' } }}
-                      checked={field.value || false}
-                      onChange={(e) => {
-                        const checked = e.currentTarget.checked;
-                        field.onChange(checked);
-                        if (handleMapManuallyWithChildren) {
-                          handleMapManuallyWithChildren(cIdx, checked, facility);
-                        } else {
-                          handleMapManuallyChange(cIdx, facilityIndex, checked);
-                        }
-                      }}
+                    <NumberInput
+                      {...field}
+                      size="sm"
+                      w={80}
+                      min={0}
+                      decimalScale={2}
+                      fixedDecimalScale
+                      disabled
+                      value={field.value ?? finalVal}
+                      hideControls
+                      styles={{ input: { textAlign: 'center', fontSize: '12px' } }}
                     />
                   )}
                 />
               );
-              const isSelected = selectedFacilities.get(col.bid)?.has(facility.bid) || false;
-              if (!anyManualMappingForThisCollateral) {
-                percDisplay = <Text size="sm">{formatTwoDecimals(finalPct)} %</Text>;
-                valueDisplay = <Text size="sm">{formatTwoDecimals(finalVal)}</Text>;
-              }
-              else if (!isMapManuallyChecked) {
-                percDisplay = <Text size="sm" c="dimmed">0.00%</Text>;
-                valueDisplay = <Text size="sm" c="dimmed">--</Text>;
-              } else {
-                if (model === 'prop') {
-                  percDisplay = (
-                    <Controller
-                      name={`perc-${cIdx}-${facility.bid}`}
-                      control={control}
-                      render={({ field }) => {
-                        const finalPct = field.value ?? (apiPct || propValues.pct);
-                        return (
-                          <NumberInput
-                            {...field}
-                            size="sm"
-                            w={80}
-                            min={0}
-                            max={100}
-                            suffix="%"
-                            decimalScale={2}
-                            fixedDecimalScale={true}
-                            allowNegative={false}
-                            disabled={!isSelected}
-                            onChange={(val) => {
-                              const num = val === '' || val == null ? 0 : Number(val);
-                              field.onChange(num);
-                              handlePercentageChange(cIdx, facilityIndex, num);
-                            }}
-                            value={finalPct}
-                            thousandSeparator
-                            hideControls
-                            styles={{ input: { textAlign: 'center' } }}
-                          />
-                        );
-                      }}
-                    />
-                  );
-                  valueDisplay = (
-                    <Controller
-                      name={`abs-${cIdx}-${facility.bid}`}
-                      control={control}
-                      render={({ field }) => (
-                        <NumberInput
-                          {...field}
-                          size="sm"
-                          w={80}
-                          min={0}
-                          decimalScale={2}
-                          fixedDecimalScale={true}
-                          disabled
-                          value={field.value ?? finalVal}
-                          thousandSeparator
-                          hideControls
-                          styles={{ input: { textAlign: 'center' } }}
-                        />
-                      )}
-                    />
-                  );
-                } else if (model === 'perc') {
-                  percDisplay = (
-                    <Controller
-                      name={`perc-${cIdx}-${facility.bid}`}
-                      control={control}
-                      render={({ field }) => (
-                        <NumberInput
-                          {...field}
-                          size="sm"
-                          w={80}
-                          min={0}
-                          max={100}
-                          suffix="%"
-                          decimalScale={2}
-                          fixedDecimalScale={true}
-                          onChange={(val) => {
-                            const num = val === '' || val == null ? 0 : Number(val);
-                            field.onChange(num);
-                            handlePercentageChange(cIdx, facilityIndex, num);
-                          }}
-                          value={field.value ?? apiPct}
-                          thousandSeparator
-                          hideControls
-                          styles={{ input: { textAlign: 'center' } }}
-                        />
-                      )}
-                    />
-                  );
-                  const currentPerc = watchedForm[`perc-${cIdx}-${facility.bid}`] ?? apiPct;
-                  valueDisplay = (
+            } else if (model === 'perc') {
+              percDisplay = (
+                <Controller
+                  name={`perc-${cIdx}-${facility.bid}`}
+                  control={control}
+                  render={({ field }) => (
                     <NumberInput
-                      size="sm"
-                      w={80}
-                      disabled
-                      value={Number(((currentPerc / 100) * colAED).toFixed(2))}
-                      fixedDecimalScale={true}
-                      thousandSeparator
-                      hideControls
-                      styles={{ input: { textAlign: 'center' } }}
-                    />
-                  );
-                } else if (model === 'abs') {
-                  valueDisplay = (
-                    <Controller
-                      name={`abs-${cIdx}-${facility.bid}`}
-                      control={control}
-                      render={({ field }) => (
-                        <NumberInput
-                          {...field}
-                          size="sm"
-                          w={80}
-                          min={0}
-                          max={colAED}
-                          precision={2}
-                          decimalScale={2}
-                          fixedDecimalScale={true}
-                          disabled={!isSelected}
-                          onChange={(val) => {
-                            const num = val === '' || val == null ? 0 : Number(val);
-                            field.onChange(num);
-                            handleValueChange(cIdx, facilityIndex, num);
-                          }}
-                          value={field.value ?? finalVal}
-                          thousandSeparator
-                          hideControls
-                          styles={{ input: { textAlign: 'center' } }}
-                        />
-                      )}
-                    />
-                  );
-                  const currentVal = watchedForm[`abs-${cIdx}-${facility.bid}`] ?? finalVal;
-                  percDisplay = (
-                    <NumberInput
+                      {...field}
                       size="sm"
                       w={80}
                       min={0}
                       max={100}
                       suffix="%"
                       decimalScale={2}
-                      fixedDecimalScale={true}
-                      disabled
-                      value={colAED > 0 ? (currentVal / colAED) * 100 : 0}
-                      thousandSeparator
+                      fixedDecimalScale
+                      onChange={(val) => {
+                        const num = val === '' || val === null ? 0 : Number(val);
+                        field.onChange(num);
+                        handlePercentageChange(cIdx, facilityIndex, num);
+                      }}
+                      value={field.value ?? apiPct}
                       hideControls
-                      styles={{ input: { textAlign: 'center' } }}
+                      styles={{ input: { textAlign: 'center', fontSize: '12px' } }}
                     />
-                  );
-                }
-              }
+                  )}
+                />
+              );
+              const currentPerc = watchedForm[`perc-${cIdx}-${facility.bid}`] ?? apiPct;
+              valueDisplay = (
+                <NumberInput
+                  size="sm"
+                  w={80}
+                  disabled
+                  value={Number(((currentPerc / 100) * colAED).toFixed(2))}
+                  fixedDecimalScale
+                  hideControls
+                  styles={{ input: { textAlign: 'center', fontSize: '12px' } }}
+                />
+              );
+            } else if (model === 'abs') {
+              valueDisplay = (
+                <Controller
+                  name={`abs-${cIdx}-${facility.bid}`}
+                  control={control}
+                  render={({ field }) => (
+                    <NumberInput
+                      {...field}
+                      size="sm"
+                      w={80}
+                      min={0}
+                      max={colAED}
+                      decimalScale={2}
+                      fixedDecimalScale
+                      disabled={!isSelected}
+                      onChange={(val) => {
+                        const num = val === '' || val === null ? 0 : Number(val);
+                        field.onChange(num);
+                        handleValueChange(cIdx, facilityIndex, num);
+                      }}
+                      value={field.value ?? finalVal}
+                      hideControls
+                      styles={{ input: { textAlign: 'center', fontSize: '12px' } }}
+                    />
+                  )}
+                />
+              );
+              const currentVal = watchedForm[`abs-${cIdx}-${facility.bid}`] ?? finalVal;
+              percDisplay = (
+                <NumberInput
+                  size="sm"
+                  w={80}
+                  min={0}
+                  max={100}
+                  suffix="%"
+                  decimalScale={2}
+                  fixedDecimalScale
+                  disabled
+                  value={colAED > 0 ? (currentVal / colAED) * 100 : 0}
+                  hideControls
+                  styles={{ input: { textAlign: 'center', fontSize: '12px' } }}
+                />
+              );
             }
+          }
+        }
 
-            return (
-              <React.Fragment key={`${facilityIndex}-${cIdx}`}>
-                <Table.Td className="cell-height" ta="center" style={{ 
-                  borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', 
-                  borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', 
-                  width: '160px', 
-                  minWidth: '160px', 
-                  maxWidth: '160px', 
-                  boxSizing: 'border-box', 
-                  padding: '8px',
-                  background: 'white'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                    {mapManuallyDisplay}
-                  </div>
-                </Table.Td>
-                <Table.Td className="cell-height" ta="center" style={{ 
-                  borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', 
-                  borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', 
-                  width: '160px', 
-                  minWidth: '160px', 
-                  maxWidth: '160px', 
-                  boxSizing: 'border-box', 
-                  padding: '8px',
-                  background: 'white'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                    {valueDisplay}
-                  </div>
-                </Table.Td>
-                <Table.Td className="cell-height" ta="center" style={{ 
-                  borderBottom: isLastInGroup ? '2px solid #dee2e6' : '1px solid #dee2e6', 
-                  borderTop: facilityIndex === 0 ? 'none' : '1px solid #dee2e6', 
-                  width: '160px', 
-                  minWidth: '160px', 
-                  maxWidth: '160px', 
-                  boxSizing: 'border-box', 
-                  padding: '8px',
-                  background: 'white'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                    {percDisplay}
-                  </div>
-                </Table.Td>
-              </React.Fragment>
-            );
-          })}
-        </Table.Tr>
-
-        {expanded && facility.children?.map((child: any, childIdx: number) => {
-          const childIndex = facilityIndex + 1 + childIdx;
-          return (
-            <FacilityRow
-              key={child.bid}
-              facility={child}
-              facilities={facilities}
-              facilityIndex={childIndex}
-              defaultCollaterals={defaultCollaterals}
-              watchedForm={watchedForm}
-              control={control}
-              isViewMapping={isViewMapping}
-              getApiValue={getApiValue}
-              parseAED={parseAED}
-              totalProposedAED={totalProposedAED}
-              handlePercentageChange={handlePercentageChange}
-              handleValueChange={handleValueChange}
-              handleMapManuallyChange={handleMapManuallyChange}
-              handleMapManuallyWithChildren={handleMapManuallyWithChildren}
-              formatTwoDecimals={formatTwoDecimals}
-              level={level + 1}
-              isLastInGroup={childIdx === facility.children.length - 1}
-              mapAtCpLevel={mapAtCpLevel}
-              selectedFacilities={selectedFacilities}
-              expandedCollaterals={expandedCollaterals}
-            />
-          );
-        })}
-      </>
-    );
-  };
-
-const FacilityRows: React.FC<{
-  facilities: any[];
-  defaultCollaterals: any[];
-  watchedForm: any;
-  control: any;
-  isViewMapping: boolean;
-  getApiValue: (colId: string, fIdx: number, type: 'pct' | 'value') => number;
-  parseAED: (v: any) => number;
-  totalProposedAED: number;
-  handlePercentageChange: (cIdx: number, fIdx: number, value: number | null) => void;
-  handleValueChange: (cIdx: number, fIdx: number, value: number | null) => void;
-  handleMapManuallyChange: (cIdx: number, fIdx: number, checked: boolean) => void;
-  handleMapManuallyWithChildren?: (cIdx: number, checked: boolean, facility: any) => void;
-  formatTwoDecimals: (num: any) => string;
-  mapAtCpLevel?: boolean;
-  selectedFacilities?: Map<string, Set<string>>;
-  expandAll: boolean;
-  expandedCollaterals: Record<number, boolean>;
-}> = ({
-  facilities,
-  defaultCollaterals,
-  watchedForm,
-  control,
-  isViewMapping,
-  getApiValue,
-  parseAED,
-  totalProposedAED,
-  handlePercentageChange,
-  handleValueChange,
-  handleMapManuallyChange,
-  handleMapManuallyWithChildren,
-  formatTwoDecimals,
-  mapAtCpLevel = false,
-  selectedFacilities = new Map(),
-  expandAll,
-  expandedCollaterals,
-}) => {
-    let facilityIndex = 0;
-
-    const renderRows = (facilityList: any[], level: number = 0): React.ReactNode[] => {
-      return facilityList.map((facility: any, idx: number) => {
-        const currentIndex = facilityIndex++;
         return (
-          <FacilityRow
-            key={facility.bid}
-            facility={facility}
-            facilities={facilities}
-            facilityIndex={currentIndex}
-            defaultCollaterals={defaultCollaterals}
-            watchedForm={watchedForm}
-            control={control}
-            isViewMapping={isViewMapping}
-            getApiValue={getApiValue}
-            parseAED={parseAED}
-            totalProposedAED={totalProposedAED}
-            handlePercentageChange={handlePercentageChange}
-            handleValueChange={handleValueChange}
-            handleMapManuallyChange={handleMapManuallyChange}
-            handleMapManuallyWithChildren={handleMapManuallyWithChildren}
-            formatTwoDecimals={formatTwoDecimals}
-            level={level}
-            isLastInGroup={idx === facilityList.length - 1}
-            mapAtCpLevel={mapAtCpLevel}
-            selectedFacilities={selectedFacilities}
-            expandAll={expandAll}
-            expandedCollaterals={expandedCollaterals}
-          />
+          <React.Fragment key={`${facilityIndex}-${cIdx}`}>
+            <Table.Td
+              className="cell-height"
+              ta="center"
+              style={{
+                borderBottom: borderBottomStyle,
+                borderTop: borderTopStyle,
+                width: COLLATERAL_COL_WIDTH,
+                minWidth: COLLATERAL_COL_WIDTH,
+                maxWidth: COLLATERAL_COL_WIDTH,
+                height: '80px',
+                padding: '4px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <Box style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {mapManuallyDisplay}
+              </Box>
+            </Table.Td>
+
+            <Table.Td
+              className="cell-height"
+              ta="center"
+              style={{
+                borderBottom: borderBottomStyle,
+                borderTop: borderTopStyle,
+                width: COLLATERAL_COL_WIDTH,
+                minWidth: COLLATERAL_COL_WIDTH,
+                maxWidth: COLLATERAL_COL_WIDTH,
+                height: '80px',
+                padding: '4px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <Box style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {valueDisplay}
+              </Box>
+            </Table.Td>
+
+            <Table.Td
+              className="cell-height"
+              ta="center"
+              style={{
+                borderBottom: borderBottomStyle,
+                borderTop: borderTopStyle,
+                width: COLLATERAL_COL_WIDTH,
+                minWidth: COLLATERAL_COL_WIDTH,
+                maxWidth: COLLATERAL_COL_WIDTH,
+                height: '80px',
+                padding: '4px',
+                boxSizing: 'border-box',
+              }}
+            >
+              <Box style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {percDisplay}
+              </Box>
+            </Table.Td>
+          </React.Fragment>
         );
-      });
-    };
-    return <>{renderRows(facilities)}</>;
-  };
+      })}
+    </Table.Tr>
+  );
+};
 
 const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
   mappingData,
@@ -924,19 +842,22 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
   const [expandAll, setExpandAll] = useState(true);
   const [errorMessages, setErrorMessages] = useState<string[]>([]);
   const [expandedCollaterals, setExpandedCollaterals] = useState<Record<number, boolean>>({});
+  const [expandedFacilities, setExpandedFacilities] = useState<Record<string, boolean>>({});
+  const [flatFacilities, setFlatFacilities] = useState<any[]>([]);
 
   // Refs for scroll synchronization
-  const headerScrollRef = useRef<HTMLDivElement>(null);
-  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const leftStickyRef = useRef<HTMLDivElement>(null);
+  const rightBodyRef = useRef<HTMLDivElement>(null);
 
-  // Synchronize horizontal scrolling between header and body
-  const handleHorizontalScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollLeft = e.currentTarget.scrollLeft;
-    if (headerScrollRef.current && e.currentTarget !== headerScrollRef.current) {
-      headerScrollRef.current.scrollLeft = scrollLeft;
+  // Synchronize vertical scrolling between left sticky and right sections
+  const handleVerticalScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const scrollTop = e.currentTarget.scrollTop;
+    
+    if (leftStickyRef.current && e.currentTarget !== leftStickyRef.current) {
+      leftStickyRef.current.scrollTop = scrollTop;
     }
-    if (bodyScrollRef.current && e.currentTarget !== bodyScrollRef.current) {
-      bodyScrollRef.current.scrollLeft = scrollLeft;
+    if (rightBodyRef.current && e.currentTarget !== rightBodyRef.current) {
+      rightBodyRef.current.scrollTop = scrollTop;
     }
   };
 
@@ -948,6 +869,44 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
     });
     setExpandedCollaterals(initialExpanded);
   }, [defaultCollaterals]);
+
+  // Initialize all facilities as expanded based on expandAll
+  useEffect(() => {
+    const newExpanded: Record<string, boolean> = {};
+    const traverse = (facList: any[]) => {
+      facList.forEach((fac) => {
+        newExpanded[fac.bid] = expandAll;
+        if (fac.children) traverse(fac.children);
+      });
+    };
+    traverse(facilities);
+    setExpandedFacilities(newExpanded);
+  }, [facilities, expandAll]);
+
+  // Flatten facilities for rendering with proper indices
+  const flattenFacilitiesWithIndices = (facList: any[], level = 0): any[] => {
+    let result: any[] = [];
+    facList.forEach((fac, idx) => {
+      result.push({ ...fac, level, originalIndex: result.length });
+      if (fac.children && expandedFacilities[fac.bid]) {
+        result = result.concat(flattenFacilitiesWithIndices(fac.children, level + 1));
+      }
+    });
+    return result;
+  };
+
+  // Update flatFacilities when facilities or expandedFacilities change
+  useEffect(() => {
+    const flattened = flattenFacilitiesWithIndices(facilities);
+    setFlatFacilities(flattened);
+  }, [facilities, expandedFacilities]);
+
+  const toggleFacilityExpand = (bid: string) => {
+    setExpandedFacilities(prev => ({
+      ...prev,
+      [bid]: !prev[bid]
+    }));
+  };
 
   const toggleCollateralExpand = (cIdx: number) => {
     setExpandedCollaterals(prev => ({
@@ -994,6 +953,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
           formModel = 'prop';
         }
         defaults[`model-${cIdx}`] = formModel;
+
         const setCoverageValues = (facList: any[]) => {
           facList.forEach((facility) => {
             const cov = facility.coverage?.[colId] || { pct: 0, value: 0, isMappedManually: false };
@@ -1022,6 +982,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
       return defaults;
     })(),
   });
+
   const watchedForm = watch();
 
   const getApiValue = (colId: string, facilityIdx: number, type: 'pct' | 'value') => {
@@ -1043,6 +1004,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
     return result;
   };
 
+  // Build selected facilities map
   useEffect(() => {
     const newMap = new Map<string, Set<string>>();
     defaultCollaterals.forEach((col: any, cIdx: number) => {
@@ -1061,7 +1023,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
       }
     });
     setSelectedFacilities(newMap);
-  }, []);
+  }, [watch, defaultCollaterals, facilities]);
 
   // Disclaimer effect
   useEffect(() => {
@@ -1087,6 +1049,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
       }
     };
     facilities?.forEach(checkFacilityExpiry);
+
     setDisclaimerText(changed.length ? `Changed: ${changed.join(', ')}` : '');
     setDisclaimerExpiredText(
       expiredCollaterals.length || expiredFacilities.length
@@ -1192,8 +1155,10 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
   ) => {
     const colAED = parseAED(defaultCollaterals[cIdx]?.proposedAmount?.baseValue);
     if (selectedBids.size === 0) return;
+
     let totalSelectedLimit = 0;
     const limitMap = new Map<string, number>();
+
     const collectLimits = (list: any[]) => {
       list.forEach((f) => {
         if (selectedBids.has(f.bid)) {
@@ -1205,7 +1170,9 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
       });
     };
     collectLimits(facilities);
+
     if (totalSelectedLimit === 0) return;
+
     selectedBids.forEach((bid) => {
       const limit = limitMap.get(bid) || 0;
       const pct = (limit / totalSelectedLimit) * 100;
@@ -1228,6 +1195,117 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
     };
 
     update(facility);
+  };
+
+  const updateManualSelection = (
+    cIdx: number,
+    bid: string,
+    checked: boolean
+  ) => {
+    const colId = defaultCollaterals[cIdx]?.bid;
+    const model = watchedForm[`model-${cIdx}`];
+    
+    setSelectedFacilities((prev) => {
+      const newMap = new Map(prev);
+      if (!newMap.has(colId)) {
+        newMap.set(colId, new Set());
+      }
+      const set = newMap.get(colId)!;
+      if (checked) set.add(bid);
+      else set.delete(bid);
+      
+      setValue(`map-${cIdx}-${bid}`, checked);
+      
+      if (model === 'prop' && set.size > 0) {
+        redistributePercentages(colId, cIdx, set);
+      }
+      
+      if (model === 'perc' || model === 'abs') {
+        const apiPct = getApiValue(colId, getFacilityIndex(facilities, bid), 'pct');
+        const apiVal = getApiValue(colId, getFacilityIndex(facilities, bid), 'value');
+        setValue(`perc-${cIdx}-${bid}`, apiPct);
+        setValue(`abs-${cIdx}-${bid}`, apiVal);
+      }
+
+      return newMap;
+    });
+  };
+
+  const handleMapManuallyChange = (
+    cIdx: number,
+    fIdx: number,
+    checked: boolean,
+    isParentAction: boolean = false
+  ) => {
+    const facility = findFacilityByIndex(facilities, fIdx);
+    if (!facility) return;
+
+    const colId = defaultCollaterals[cIdx]?.bid;
+    const model = watchedForm[`model-${cIdx}`];
+
+    if (!isParentAction && facility.children && facility.children.length > 0) {
+      const childBids = collectChildBids(facility);
+      
+      childBids.forEach((childBid) => {
+        setValue(`map-${cIdx}-${childBid}`, checked);
+        updateManualSelection(cIdx, childBid, checked);
+      });
+      
+      updateManualSelection(cIdx, facility.bid, checked);
+    } else {
+      updateManualSelection(cIdx, facility.bid, checked);
+    }
+  };
+
+  const handleHeaderMapChange = (cIdx: number, checked: boolean) => {
+    const colId = defaultCollaterals[cIdx]?.bid;
+    const model = watchedForm[`model-${cIdx}`];
+
+    const toggleAll = (facList: any[]) => {
+      facList.forEach((facility) => {
+        setValue(`map-${cIdx}-${facility.bid}`, checked);
+        setSelectedFacilities((prev) => {
+          const newMap = new Map(prev);
+          if (!newMap.has(colId)) newMap.set(colId, new Set());
+          const s = newMap.get(colId)!;
+          if (checked) s.add(facility.bid);
+          else s.delete(facility.bid);
+          return newMap;
+        });
+        
+        if (facility.children?.length) {
+          toggleAll(facility.children);
+        }
+      });
+    };
+    toggleAll(facilities);
+
+    if (checked && model === 'prop') {
+      const bids = new Set<string>();
+      const collect = (list: any[]) => {
+        list.forEach((f) => {
+          bids.add(f.bid);
+          if (f.children) collect(f.children);
+        });
+      };
+      collect(facilities);
+      redistributePercentages(colId, cIdx, bids);
+    }
+
+    if (checked && (model === 'perc' || model === 'abs')) {
+      const resetValues = (list: any[]) => {
+        list.forEach((f) => {
+          const apiPct = getApiValue(colId, getFacilityIndex(facilities, f.bid), 'pct');
+          const apiVal = getApiValue(colId, getFacilityIndex(facilities, f.bid), 'value');
+
+          setValue(`perc-${cIdx}-${f.bid}`, apiPct);
+          setValue(`abs-${cIdx}-${f.bid}`, apiVal);
+
+          if (f.children) resetValues(f.children);
+        });
+      };
+      resetValues(facilities);
+    }
   };
 
   const handlePercentageChange = (cIdx: number, fIdx: number, value: number | null) => {
@@ -1270,94 +1348,6 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
         setValue(`model-${cIdx}`, 'perc');
         setEditedCollaterals((prev) => new Set([...prev, defaultCollaterals[cIdx]?.bid]));
       }
-    }
-  };
-
-  const updateManualSelection = (
-    cIdx: number,
-    bid: string,
-    checked: boolean
-  ) => {
-    const colId = defaultCollaterals[cIdx]?.bid;
-    const model = watchedForm[`model-${cIdx}`];
-    setSelectedFacilities((prev) => {
-      const newMap = new Map(prev);
-      if (!newMap.has(colId)) {
-        newMap.set(colId, new Set());
-      }
-      const set = newMap.get(colId)!;
-      if (checked) set.add(bid);
-      else set.delete(bid);
-      setValue(`map-${cIdx}-${bid}`, checked);
-      if (model === 'prop' && set.size > 0) {
-        redistributePercentages(colId, cIdx, set);
-      }
-      if (model === 'perc' || model === 'abs') {
-        const apiPct = getApiValue(colId, getFacilityIndex(facilities, bid), 'pct');
-        const apiVal = getApiValue(colId, getFacilityIndex(facilities, bid), 'value');
-        setValue(`perc-${cIdx}-${bid}`, apiPct);
-        setValue(`abs-${cIdx}-${bid}`, apiVal);
-      }
-
-      return newMap;
-    });
-  };
-
-  const handleMapManuallyChange = (
-    cIdx: number,
-    fIdx: number,
-    checked: boolean
-  ) => {
-    const facility = findFacilityByIndex(facilities, fIdx);
-    if (!facility) return;
-    updateManualSelection(cIdx, facility.bid, checked);
-  };
-
-  const handleHeaderMapChange = (cIdx: number, checked: boolean) => {
-    const colId = defaultCollaterals[cIdx]?.bid;
-    const model = watchedForm[`model-${cIdx}`];
-
-    const toggleAll = (facList: any[]) => {
-      facList.forEach((facility) => {
-        setValue(`map-${cIdx}-${facility.bid}`, checked);
-        setSelectedFacilities((prev) => {
-          const newMap = new Map(prev);
-          if (!newMap.has(colId)) newMap.set(colId, new Set());
-          const s = newMap.get(colId)!;
-          if (checked) s.add(facility.bid);
-          else s.delete(facility.bid);
-          return newMap;
-        });
-        if (facility.children?.length) toggleAll(facility.children);
-      });
-    };
-    toggleAll(facilities);
-
-    if (checked && model === 'prop') {
-      const bids = new Set<string>();
-      const collect = (list: any[]) => {
-        list.forEach((f) => {
-          bids.add(f.bid);
-          if (f.children) collect(f.children);
-        });
-      };
-      collect(facilities);
-      redistributePercentages(colId, cIdx, bids);
-    }
-
-    if (checked && (model === 'perc' || model === 'abs')) {
-      const resetValues = (list: any[]) => {
-        list.forEach((f) => {
-          const apiPct = getApiValue(colId, getFacilityIndex(facilities, f.bid), 'pct');
-          const apiVal = getApiValue(colId, getFacilityIndex(facilities, f.bid), 'value');
-
-          setValue(`perc-${cIdx}-${f.bid}`, apiPct);
-          setValue(`abs-${cIdx}-${f.bid}`, apiVal);
-
-          if (f.children) resetValues(f.children);
-        });
-      };
-      resetValues(facilities);
     }
   };
 
@@ -1454,6 +1444,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
       });
       return result;
     };
+
     const payload = {
       obligorId: obligorDetails?.ObligorId || 'OBLIGOR-001',
       cpId: obligorDetails?.ObligorId === 'OBLIGOR-001' ? 'AKSHAY' : obligorDetails?.CpId,
@@ -1465,16 +1456,19 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
         if (model === 'prop') allocationModel = 'PROPORTIONATE';
         if (model === 'perc') allocationModel = 'PERCENTAGE';
         if (model === 'abs') allocationModel = 'ABSOLUTE';
+
         const facilityCoverageDetails: any[] = [];
         const hasManualSelected = flattenFacilities(facilities).some(
           (f: any) => watchedForm[`map-${cIdx}-${f.bid}`]
         );
+
         const collect = (facList: any[]) => {
           facList.forEach((f: any) => {
             const bid = f.bid;
             const isChecked = watchedForm[`map-${cIdx}-${bid}`] ?? false;
             let pct = 0;
             let val = 0;
+
             if (hasManualSelected) {
               if (isChecked) {
                 if (model === 'perc') {
@@ -1518,6 +1512,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
           });
         };
         collect(facilities);
+
         const allocated = facilityCoverageDetails.reduce((sum, item) => sum + item.value, 0);
         return {
           collateralId: col.bid,
@@ -1527,7 +1522,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
         };
       }),
     };
-    console.log('Payload to submit:', payload);
+
     setPendingPayload(payload);
     setConfirmOpened(true);
   };
@@ -1567,6 +1562,11 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
     }
   };
 
+  // Calculate scrollable section width
+  const scrollableWidth = defaultCollaterals.reduce((sum, _, idx) => {
+    return sum + (expandedCollaterals[idx] ? COLLATERAL_COL_WIDTH * 3 : COLLATERAL_COL_WIDTH_COLLAPSED);
+  }, 0);
+
   if (isAllocationScreenDisabled && !isViewMapping) {
     return (
       <Card shadow="sm" padding="xl" radius="xl" withBorder>
@@ -1584,15 +1584,10 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
     );
   }
 
-  const minTableWidth = FIRST_COL_WIDTH + SECOND_COL_WIDTH +
-    defaultCollaterals.reduce((sum, _, idx) => {
-      return sum + (expandedCollaterals[idx] ? COLLATERAL_COL_WIDTH * 3 : COLLATERAL_COL_WIDTH_COLLAPSED);
-    }, 0);
-
   return (
     <>
-      <Card shadow="sm" padding="xl" radius="xl" withBorder>
-        <Group justify="space-between" align="center" mb="sm">
+      <Card shadow="sm" padding="0" radius="xl" withBorder>
+        <Group justify="space-between" align="center" p="md">
           <Title order={4} fw={500}>{t('customTable.collateralFacilityMapping')}</Title>
           <Group gap={6}>
             <Checkbox
@@ -1605,135 +1600,310 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
           </Group>
         </Group>
 
-        <Paper withBorder shadow="none" radius="xs" p={0} m={0} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '600px' }}>
-            {/* Header Section - Sticky at top with horizontal scroll */}
-            <Box 
-              ref={headerScrollRef}
-              onScroll={handleHorizontalScroll}
-              style={{ 
-                overflowX: 'auto',
-                overflowY: 'hidden',
-                borderBottom: '1px solid #dee2e6',
-                background: 'white',
+        {/* Split Table Layout with Horizontal and Vertical Scroll */}
+        <Paper withBorder shadow="none" radius="xs" p={0} style={{ overflow: 'hidden' }}>
+          <Box style={{ display: 'flex', width: '100%', position: 'relative' }}>
+            {/* Left Sticky Section with Vertical Scroll */}
+            <Box
+              ref={leftStickyRef}
+              onScroll={handleVerticalScroll}
+              style={{
                 position: 'sticky',
-                top: 0,
-                zIndex: 5
+                left: 0,
+                zIndex: 10,
+                background: 'white',
+                borderRight: '1px solid #dee2e6',
+                maxHeight: '500px',
+                overflowY: 'auto',
+                overflowX: 'hidden',
               }}
             >
               <Table
                 withRowBorders={false}
                 verticalSpacing="xs"
                 horizontalSpacing="xs"
-                className="table-default"
-                style={{ 
-                  minWidth: minTableWidth, 
-                  tableLayout: 'fixed', 
+                style={{
+                  tableLayout: 'fixed',
                   borderCollapse: 'collapse',
-                  marginBottom: 0
+                  width: 'auto',
                 }}
               >
-                <TableHeader
-                  defaultCollaterals={defaultCollaterals}
-                  isViewMapping={isViewMapping}
-                  control={control}
-                  handleModelChange={handleModelChange}
-                  mapAtCpLevel={mapAtCpLevel}
-                  headerMapChecked={headerMapChecked}
-                  headerMapIndeterminate={headerMapIndeterminate}
-                  handleHeaderMapChange={handleHeaderMapChange}
-                  expandAll={expandAll}
-                  setExpandAll={setExpandAll}
-                  expandedCollaterals={expandedCollaterals}
-                  toggleCollateralExpand={toggleCollateralExpand}
-                />
+                <Table.Thead>
+                  {/* Header Row 1 - Collateral Category */}
+                  <Table.Tr>
+                    <EmptyLeftTh width={FIRST_COL_WIDTH} />
+                    <Table.Th
+                      w={SECOND_COL_WIDTH}
+                      className="header-cell top-left-aligned"
+                      style={{
+                        ...secondColSticky,
+                        height: '82px',
+                        backgroundColor: '#f8f9fa',
+                        padding: '12px 0 0 12px',
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 11,
+                      }}
+                    >
+                      <Text size="sm" c="#262626" fw={600}>
+                        {t('customTable.collateralCategory')}
+                      </Text>
+                      <Text size="sm" c="#262626">
+                        {t('customTable.collAmount')}
+                        <Text span size="xs" c="red">
+                          **
+                        </Text>
+                      </Text>
+                    </Table.Th>
+                  </Table.Tr>
+
+                  {/* Header Row 2 - Collateral Description */}
+                  <Table.Tr>
+                    <EmptyLeftTh width={FIRST_COL_WIDTH} />
+                    <Table.Th
+                      className="header-cell"
+                      style={{
+                        ...secondColSticky,
+                        height: '42px',
+                        backgroundColor: '#f8f9fa',
+                        padding: '8px 0 0 12px',
+                        position: 'sticky',
+                        top: '82px',
+                        zIndex: 11,
+                      }}
+                    >
+                      <Text size="sm" fw={600} c="#262626" className="des">
+                        {t('customTable.collateralDescription')}
+                      </Text>
+                    </Table.Th>
+                  </Table.Tr>
+
+                  {/* Header Row 3 - Allocation Model */}
+                  <Table.Tr>
+                    <EmptyLeftTh width={FIRST_COL_WIDTH} />
+                    <Table.Th
+                      className="header-cell"
+                      style={{
+                        ...secondColSticky,
+                        height: '120px',
+                        backgroundColor: '#f8f9fa',
+                        padding: '8px 0 0 12px',
+                        borderBottom: '1px solid #dee2e6',
+                        position: 'sticky',
+                        top: '124px',
+                        zIndex: 11,
+                      }}
+                    >
+                      <Text size="sm" fw={600}>
+                        {t('customTable.allocationModel')}
+                      </Text>
+                    </Table.Th>
+                  </Table.Tr>
+
+                  {/* Header Row 4 - Facility Details */}
+                  <Table.Tr>
+                    <Table.Th 
+                      ta="left" 
+                      style={{ 
+                        ...stickyLeft, 
+                        ...secondStickyColr, 
+                        height: '70px',
+                        borderBottom: '1px solid #dee2e6',
+                        position: 'sticky',
+                        top: '244px',
+                        zIndex: 11,
+                      }}
+                    >
+                      <Group gap={4}>
+                        <ActionIcon
+                          size="xs"
+                          variant="transparent"
+                          onClick={() => setExpandAll(!expandAll)}
+                        >
+                          {expandAll ? (
+                            <IconChevronsUp size={14} />
+                          ) : (
+                            <IconChevronsDown size={14} />
+                          )}
+                        </ActionIcon>
+                        <Text size="sm" fw={500}>
+                          {t('customTable.facilityDetails')}
+                        </Text>
+                      </Group>
+                    </Table.Th>
+                    <Table.Th
+                      className="cell-all-border"
+                      ta="left"
+                      style={{ 
+                        ...secondColSticky, 
+                        ...secondStickyColr, 
+                        height: '70px',
+                        borderBottom: '1px solid #dee2e6',
+                        position: 'sticky',
+                        top: '244px',
+                        zIndex: 11,
+                      }}
+                    >
+                      <Text size="sm" fw={500} m={0} style={{ lineHeight: '1.4' }}>
+                        {t('customTable.facilityAmount')}
+                        <br />
+                        {t('customTable.rPA')}
+                      </Text>
+                    </Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+
+                <Table.Tbody>
+                  {flatFacilities.map((facility, idx) => (
+                    <StickyFacilityRow
+                      key={facility.bid}
+                      facility={facility}
+                      facilityIndex={idx}
+                      level={facility.level}
+                      isLastInGroup={idx === flatFacilities.length - 1}
+                      hasChildren={facility.children?.length > 0}
+                      expanded={expandedFacilities[facility.bid]}
+                      onToggle={() => toggleFacilityExpand(facility.bid)}
+                    />
+                  ))}
+                </Table.Tbody>
               </Table>
             </Box>
 
-            {/* Body Section - Vertical and horizontal scroll */}
-            <Box 
-              ref={bodyScrollRef}
-              onScroll={handleHorizontalScroll}
-              style={{ 
-                overflowX: 'auto',
-                overflowY: 'auto',
-                flex: 1,
-                background: 'white'
-              }}
-            >
-              <Table
-                withRowBorders={false}
-                verticalSpacing="xs"
-                horizontalSpacing="xs"
-                className="table-default"
+            {/* Right Scrollable Section - With Horizontal and Vertical Scroll */}
+            <Box style={{ 
+              flex: 1, 
+              display: 'flex',
+              flexDirection: 'column',
+              maxHeight: '500px',
+              overflow: 'hidden',
+            }}>
+              {/* Right Header - Sticky Top, Horizontal Scroll Only */}
+              <Box 
                 style={{ 
-                  minWidth: minTableWidth, 
-                  tableLayout: 'fixed', 
-                  borderCollapse: 'collapse'
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  borderBottom: '1px solid #dee2e6',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 9,
+                  background: 'white',
                 }}
               >
-                <Table.Tbody>
-                  <FacilityRows
-                    facilities={facilities}
+                <Box style={{ minWidth: scrollableWidth }}>
+                  <ScrollableHeader
                     defaultCollaterals={defaultCollaterals}
-                    watchedForm={watchedForm}
-                    control={control}
                     isViewMapping={isViewMapping}
-                    getApiValue={getApiValue}
-                    parseAED={parseAED}
-                    totalProposedAED={totalProposedAED}
-                    handlePercentageChange={handlePercentageChange}
-                    handleValueChange={handleValueChange}
-                    handleMapManuallyChange={handleMapManuallyChange}
-                    handleMapManuallyWithChildren={handleMapManuallyWithChildren}
-                    formatTwoDecimals={formatTwoDecimals}
+                    control={control}
+                    handleModelChange={handleModelChange}
                     mapAtCpLevel={mapAtCpLevel}
-                    selectedFacilities={selectedFacilities}
-                    expandAll={expandAll}
+                    headerMapChecked={headerMapChecked}
+                    headerMapIndeterminate={headerMapIndeterminate}
+                    handleHeaderMapChange={handleHeaderMapChange}
                     expandedCollaterals={expandedCollaterals}
+                    toggleCollateralExpand={toggleCollateralExpand}
                   />
-                </Table.Tbody>
-              </Table>
+                </Box>
+              </Box>
+
+              {/* Right Body - Vertical and Horizontal Scroll */}
+              <Box 
+                ref={rightBodyRef}
+                onScroll={handleVerticalScroll}
+                style={{ 
+                  overflowX: 'auto',
+                  overflowY: 'auto',
+                  flex: 1,
+                }}
+              >
+                <Box style={{ minWidth: scrollableWidth }}>
+                  <Table withTableBorder={false} withColumnBorders={false}>
+                    <Table.Tbody>
+                      {flatFacilities.map((facility, idx) => (
+                        <ScrollableFacilityRow
+                          key={facility.bid}
+                          facility={facility}
+                          facilityIndex={idx}
+                          defaultCollaterals={defaultCollaterals}
+                          watchedForm={watchedForm}
+                          control={control}
+                          isViewMapping={isViewMapping}
+                          getApiValue={getApiValue}
+                          parseAED={parseAED}
+                          totalProposedAED={totalProposedAED}
+                          handlePercentageChange={handlePercentageChange}
+                          handleValueChange={handleValueChange}
+                          handleMapManuallyChange={handleMapManuallyChange}
+                          handleMapManuallyWithChildren={handleMapManuallyWithChildren}
+                          formatTwoDecimals={formatTwoDecimals}
+                          isLastInGroup={
+                            idx === flatFacilities.length - 1 ||
+                            (facility.children?.length > 0 &&
+                              !expandedFacilities[facility.bid] &&
+                              idx < flatFacilities.length - 1 &&
+                              flatFacilities[idx + 1].level <= facility.level)
+                          }
+                          mapAtCpLevel={mapAtCpLevel}
+                          selectedFacilities={selectedFacilities}
+                          expandedCollaterals={expandedCollaterals}
+                        />
+                      ))}
+                    </Table.Tbody>
+                  </Table>
+                </Box>
+              </Box>
             </Box>
           </Box>
         </Paper>
 
-        <Box style={{ borderTop: '1px solid #eee', paddingTop: 24, paddingBottom: 2, marginTop: 16 }}>
+        <Box p="md" style={{ borderTop: '1px solid #eee' }}>
           <Stack gap={0}>
             {disclaimerText && (
               <Text size="xs" c="#262626">
-                <Text span size="xs" c="red">*</Text>{t('customTable.disclaimer')}: {disclaimerText}
+                <Text span size="xs" c="red">
+                  *
+                </Text>
+                {t('customTable.disclaimer')}: {disclaimerText}
               </Text>
             )}
             {disclaimerExpiredText && (
               <Text size="xs" c="#262626">
-                <Text span size="xs" c="red">*</Text>{t('customTable.disclaimer')}: {disclaimerExpiredText}
+                <Text span size="xs" c="red">
+                  *
+                </Text>
+                {t('customTable.disclaimer')}: {disclaimerExpiredText}
               </Text>
             )}
             <Text size="xs" c="#262626">
-              <Text span size="xs" c="red">**</Text>{t('customTable.actualCurrency')}
+              <Text span size="xs" c="red">
+                **
+              </Text>
+              {t('customTable.actualCurrency')}
             </Text>
             <Text size="xs" c="dimmed">
-              <Text span size="xs" c="red">**</Text>{t('customTable.baseCurrency')}
+              <Text span size="xs" c="red">
+                **
+              </Text>
+              {t('customTable.baseCurrency')}
             </Text>
           </Stack>
         </Box>
-
-        <Box mt={6}>
-          <Group justify="flex-end">
-            {!isViewMapping && (
-              <Group gap="sm">
-                <Button variant="light" color="gray" radius="xl" size="sm" onClick={() => setObligorId('')}>
-                  Cancel
-                </Button>
-                <Button color="#213C81" radius="xl" size="sm" onClick={onSubmitForm} loading={isSubmitting}>
-                  Next
-                </Button>
-              </Group>
-            )}
-          </Group>
-        </Box>
       </Card>
+
+      <Box mt={6} p="md">
+        <Group justify="flex-end">
+          {!isViewMapping && (
+            <Group gap="sm">
+              <Button variant="light" color="gray" radius="xl" size="sm" onClick={() => setObligorId('')}>
+                Cancel
+              </Button>
+              <Button color="#213C81" radius="xl" size="sm" onClick={onSubmitForm} loading={isSubmitting}>
+                Next
+              </Button>
+            </Group>
+          )}
+        </Group>
+      </Box>
 
       <CoverageExceededModal
         opened={opened}
@@ -1741,6 +1911,7 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
         body={disclaimerExpiredText || errorMessages.join(', ')}
         onClose={() => setOpened(false)}
       />
+
       <ConfirmationModal
         opened={confirmOpened}
         onClose={() => {
@@ -1763,33 +1934,62 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
 export default CollateralFacilityCoverage;
 /* collateral-facility-mapping.css */
 
-/* Ensure the facility details column stays sticky during horizontal scroll */
-.cell-height:first-child {
-  position: sticky !important;
-  left: 0;
-  z-index: 3;
-  background: #f8f9fa;
-  border-right: 1px solid #dee2e6;
+/* Left sticky section scrollbar */
+[ref="leftStickyRef"]::-webkit-scrollbar {
+  width: 10px;
 }
 
-.cell-height:nth-child(2) {
-  position: sticky !important;
-  left: 190px; /* FIRST_COL_WIDTH */
-  z-index: 2;
-  background: #f8f9fa;
-  border-right: 1px solid #dee2e6;
+[ref="leftStickyRef"]::-webkit-scrollbar-track {
+  background: #f1f1f1;
 }
 
-/* For the header section */
-.header-cell {
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 4;
-  border-bottom: 1px solid #dee2e6;
+[ref="leftStickyRef"]::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
 }
 
-/* Smooth scrolling */
+[ref="leftStickyRef"]::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Right body scrollbar */
+[ref="rightBodyRef"]::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+[ref="rightBodyRef"]::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+[ref="rightBodyRef"]::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
+
+[ref="rightBodyRef"]::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Right header scrollbar (horizontal only) */
+[style*="overflowX: auto"][style*="position: sticky"]::-webkit-scrollbar {
+  height: 10px;
+}
+
+[style*="overflowX: auto"][style*="position: sticky"]::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+[style*="overflowX: auto"][style*="position: sticky"]::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
+
+[style*="overflowX: auto"][style*="position: sticky"]::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* General scrollbar styles */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -1807,6 +2007,32 @@ export default CollateralFacilityCoverage;
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Ensure the facility details column stays sticky during horizontal scroll */
+.cell-height:first-child {
+  position: sticky !important;
+  left: 0;
+  z-index: 5;
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+}
+
+.cell-height:nth-child(2) {
+  position: sticky !important;
+  left: 190px; /* FIRST_COL_WIDTH */
+  z-index: 4;
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+}
+
+/* For the header section */
+.header-cell {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 4;
+  border-bottom: 1px solid #dee2e6;
 }
 
 /* Ensure proper border rendering */
@@ -1857,8 +2083,9 @@ export default CollateralFacilityCoverage;
 
 /* Cell height consistency */
 .cell-height {
-  height: 80px;
-  min-height: 80px;
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
 }
 
 /* Ellipsis text */
@@ -1873,15 +2100,11 @@ export default CollateralFacilityCoverage;
 .des {
   max-width: 200px;
   word-wrap: break-word;
+  white-space: normal;
 }
 
 /* Sticky positioning for collateral headers */
 [style*="position: sticky"][style*="top: 0"] {
-  background: white;
-  z-index: 4;
-}
-
-[style*="position: sticky"][style*="top: 41px"] {
   background: white;
   z-index: 4;
 }
@@ -1891,7 +2114,96 @@ export default CollateralFacilityCoverage;
   z-index: 4;
 }
 
-[style*="position: sticky"][style*="top: 123px"] {
+[style*="position: sticky"][style*="top: 124px"] {
+  background: white;
+  z-index: 4;
+}
+
+[style*="position: sticky"][style*="top: 244px"] {
   background: #f8f9fa;
   z-index: 4;
+}
+
+/* Left sticky section specific styles */
+.left-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 11;
+  background: #f8f9fa;
+}
+
+/* Right header styles */
+.right-header-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  background: white;
+}
+
+/* Smooth transitions */
+.cell-height {
+  transition: background-color 0.2s ease;
+}
+
+/* Fix for table layout */
+.table-default {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+/* Sticky column styles */
+.sticky-col-first {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background: #f8f9fa;
+}
+
+.sticky-col-second {
+  position: sticky;
+  left: 190px;
+  z-index: 4;
+  background: #f8f9fa;
+}
+
+/* Ensure borders are visible during scroll */
+.cell-all-border {
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Hover effect for rows */
+.cell-height:hover {
+  background-color: #f5f5f5;
+}
+
+/* Expired text style */
+.expired-text {
+  color: red;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Disabled state for inputs */
+input:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Radio group styles */
+.mantine-Radio-root {
+  margin-bottom: 4px;
+}
+
+/* Checkbox styles */
+.mantine-Checkbox-root {
+  margin: 0 auto;
+}
+
+/* Number input styles */
+.mantine-NumberInput-input {
+  min-height: 28px;
+  height: 28px;
+  font-size: 12px;
 }
