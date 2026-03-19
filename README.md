@@ -1761,3 +1761,137 @@ const CollateralFacilityCoverage: React.FC<CollateralFacilityCoverageProps> = ({
 };
 
 export default CollateralFacilityCoverage;
+/* collateral-facility-mapping.css */
+
+/* Ensure the facility details column stays sticky during horizontal scroll */
+.cell-height:first-child {
+  position: sticky !important;
+  left: 0;
+  z-index: 3;
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+}
+
+.cell-height:nth-child(2) {
+  position: sticky !important;
+  left: 190px; /* FIRST_COL_WIDTH */
+  z-index: 2;
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+}
+
+/* For the header section */
+.header-cell {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 4;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Smooth scrolling */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Ensure proper border rendering */
+.cell-all-border {
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Collapsed state styling */
+.cell-collapsed {
+  background: white;
+  border: none !important;
+}
+
+/* For the nested table in header */
+.nested-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.nested-table td {
+  padding: 4px;
+  border: none;
+}
+
+/* Table default styles */
+.table-default {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table-default th,
+.table-default td {
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+}
+
+/* Top-left alignment utility */
+.top-left-aligned {
+  text-align: left;
+  vertical-align: top;
+}
+
+/* Cell padding utilities */
+.cell-padding-remove {
+  padding: 0 !important;
+}
+
+/* Cell height consistency */
+.cell-height {
+  height: 80px;
+  min-height: 80px;
+}
+
+/* Ellipsis text */
+.ellipsis-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+/* Description text */
+.des {
+  max-width: 200px;
+  word-wrap: break-word;
+}
+
+/* Sticky positioning for collateral headers */
+[style*="position: sticky"][style*="top: 0"] {
+  background: white;
+  z-index: 4;
+}
+
+[style*="position: sticky"][style*="top: 41px"] {
+  background: white;
+  z-index: 4;
+}
+
+[style*="position: sticky"][style*="top: 82px"] {
+  background: white;
+  z-index: 4;
+}
+
+[style*="position: sticky"][style*="top: 123px"] {
+  background: #f8f9fa;
+  z-index: 4;
+}
